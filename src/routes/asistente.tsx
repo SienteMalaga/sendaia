@@ -225,7 +225,25 @@ function Asistente() {
       </section>
 
       <section className="mt-8 px-5">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t.transcriptLabel}
+        </label>
+        <textarea
+          value={transcript}
+          onChange={(event) => {
+            setTranscript(event.target.value);
+            setTema(null);
+            setRespuesta(null);
+            setMensaje("");
+          }}
+          placeholder={t.transcriptPlaceholder}
+          rows={3}
+          className="w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-soft outline-none transition placeholder:text-muted-foreground focus:border-primary"
+        />
+      </section>
+
+      <section className="mt-5 px-5">
+        <label className="mb-2 block text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t.atajos}
         </label>
         <div className="flex flex-wrap justify-center gap-2">
@@ -246,63 +264,22 @@ function Asistente() {
         </div>
       </section>
 
-      {respuesta && (
+      {(respuesta || mensaje) && (
         <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
           <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <span className="font-semibold">{t.tuConsulta}: </span>"{RESPUESTAS[tema!].label}"
+            <span className="font-semibold">{t.tuConsulta}: </span>{transcript.trim() || "—"}
           </div>
-          <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="text-xs font-semibold uppercase tracking-wider text-primary">
-              {respuesta.categoria}
+
+          {respuesta ? (
+            <article className="space-y-3 rounded-2xl border border-border bg-card p-5 text-[15px] leading-relaxed shadow-card">
+              <p><span className="font-bold">{t.diagnostico}: </span>{respuesta.diagnostico}</p>
+              <p><span className="font-bold">{t.solucion}: </span>{respuesta.solucion}</p>
+              <p><span className="font-bold">{t.validado}: </span>{respuesta.autor}</p>
+            </article>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-5 text-sm font-semibold text-foreground shadow-card">
+              {mensaje}
             </div>
-            <h3 className="mt-1 text-lg font-bold text-foreground">{respuesta.titulo}</h3>
-
-            <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t.diagnostico}
-            </h4>
-            <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.diagnostico}</p>
-
-            <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t.solucion}
-            </h4>
-            <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.solucion}</p>
-
-            <button
-              onClick={() => escuchar(audioTexto)}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90"
-            >
-              <Volume2 className="h-4 w-4" />
-              {t.escuchar}
-            </button>
-
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-xs text-success">
-              <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
-              <div>
-                <div className="font-bold uppercase tracking-wider">{t.badge}</div>
-                <div className="mt-0.5 font-medium">{t.validado}: {respuesta.autor}</div>
-              </div>
-            </div>
-          </article>
-
-          {respuesta.relacionados.length > 0 && (
-            <section className="mt-6">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                {t.relacionados}
-              </h4>
-              <div className="mt-2 space-y-2">
-                {respuesta.relacionados.map((r) => (
-                  <Link
-                    key={r}
-                    to="/detalle/$tema"
-                    params={{ tema: encodeURIComponent(r) }}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 text-sm shadow-soft transition hover:border-primary hover:bg-primary/5"
-                  >
-                    <span className="font-medium text-foreground">{r}</span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
-                  </Link>
-                ))}
-              </div>
-            </section>
           )}
         </section>
       )}
