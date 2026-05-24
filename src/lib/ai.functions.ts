@@ -80,6 +80,7 @@ REGLAS ESTRICTAS:
 - "pasos": MÁXIMO 2 pasos directos y accionables. Frases cortas, imperativas. NO expliques teoría.
 - "consejoMaestro": UNA frase con sabor de taller (máx 15 palabras).
 - Sin introducciones, sin "lo primero que debes hacer", sin advertencias genéricas.
+- Prohibido mencionar arranque, batería o coche que no arranca si el usuario no lo ha escrito.
 - Lenguaje claro de taller, técnicamente correcto.`;
 
   const body = {
