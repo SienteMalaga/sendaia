@@ -66,36 +66,6 @@ function matchAtajo(consultaRaw: string): CasoFijo | null {
     };
   }
 
-  if (has("prensa", "silbido", "hidráulica", "hidraulica")) {
-    return {
-      titulo: "Silbido en prensa hidráulica",
-      categoria: "Maquinaria Industrial",
-      diagnostico: "Fuga de presión por desgaste en la junta tórica principal.",
-      pasos: [
-        "Para la máquina ya con el botón de emergencia.",
-        "Sustituye la junta de goma antes de que dañe el retén del pistón.",
-      ],
-      consejoMaestro: "Si la dejas trabajando con silbido, el retén se va y la reparación se multiplica por diez.",
-      relacionados: ["Cambiar retén de pistón", "Purgar aceite hidráulico", "Calibrar válvula de presión"],
-      autor: "Manuel Benítez (Polígono Guadalhorce)",
-    };
-  }
-
-  if (has("correa", "distribución", "distribucion")) {
-    return {
-      titulo: "Desgaste de correa de distribución",
-      categoria: "Mecánica General",
-      diagnostico: "Desgaste térmico y cristalización del caucho.",
-      pasos: [
-        "Gira la correa y pasa el dedo por los dientes internos.",
-        "Si ves grietas milimétricas o brilla como cristal, cámbiala de inmediato; con el calor de Málaga rompen antes.",
-      ],
-      consejoMaestro: "Una correa rota se lleva por delante el motor entero. No la apures.",
-      relacionados: ["Cambiar kit de distribución", "Tensor de correa flojo", "Bomba de agua con holgura"],
-      autor: "María José Suárez (Especialista en Motores)",
-    };
-  }
-
   return null;
 }
 
