@@ -115,39 +115,40 @@ function detectarTema(transcript: string): TemaKey | null {
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [escuchando, setEscuchando] = useState(false);
+  const [transcript, setTranscript] = useState("");
   const [tema, setTema] = useState<TemaKey | null>(null);
+  const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
+  const [mensaje, setMensaje] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const t = ui[idioma];
-  const meta = idiomas.find((i) => i.code === idioma)!;
-  const respuesta = tema ? RESPUESTAS[tema].data : null;
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const seleccionar = (k: TemaKey) => {
     if (escuchando) return;
+    setTranscript(RESPUESTAS[k].label);
     setTema(k);
+    setRespuesta(RESPUESTAS[k].data);
+    setMensaje("");
   };
 
   const handleHablar = () => {
     if (escuchando) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    setTema(null);
+    setRespuesta(null);
+    setMensaje("");
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
+      const textoReal = transcript.trim();
+      const temaDetectado = detectarTema(textoReal);
       setEscuchando(false);
-      setTema((prev) => prev ?? "bateria");
+      setTema(temaDetectado);
+      setRespuesta(temaDetectado ? RESPUESTAS[temaDetectado].data : null);
+      setMensaje(temaDetectado ? "" : t.sinConsulta);
     }, 3000);
   };
-
-  const escuchar = (str: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(str);
-    u.lang = meta.bcp47;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  };
-
-  const audioTexto = respuesta ? `${respuesta.diagnostico}. ${respuesta.solucion}` : "";
 
   return (
     <AppShell>
