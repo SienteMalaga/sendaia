@@ -35,7 +35,7 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
     escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
     badge: "Legado Protegido", error: "No pude conectar con el maestro.",
     simLabel: "Simular lo que dice el usuario", simPlaceholder: "Ej. humo blanco en el motor",
-    demoConsulta: "El tornillo del cárter del aceite está atascado y no sale",
+    demoConsulta: "El coche no arranca por la mañana",
   },
   en: {
     titulo: "Voice diagnosis", subtitulo: "Press, speak or type. The master's AI replies.",
