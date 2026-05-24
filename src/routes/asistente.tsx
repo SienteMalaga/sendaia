@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Volume2, Sparkles, ShieldCheck, ChevronRight } from "lucide-react";
+import { Mic, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export const Route = createFileRoute("/asistente")({
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/asistente")({
 });
 
 type IdiomaCode = "es" | "en" | "fr" | "de" | "ar";
-type TemaKey = "bateria" | "aceite" | "distribucion";
+type TemaKey = "aceite" | "bateria" | "bujia";
 
 const idiomas: { code: IdiomaCode; label: string; bcp47: string }[] = [
   { code: "es", label: "Español", bcp47: "es-ES" },
@@ -28,131 +28,127 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
   es: {
     titulo: "Diagnóstico por voz", subtitulo: "Pulsa el micro o elige una palabra técnica. Respuesta al instante.",
     idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando...",
-    atajos: "Palabras técnicas de ejemplo",
+    atajos: "Palabras clave de demo", transcriptLabel: "Transcript detectado por el micrófono",
+    transcriptPlaceholder: "Escribe exactamente lo que quieres simular: cómo cambiar el aceite",
     tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", solucion: "Solución",
-    relacionados: "Más averías similares",
-    escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
-    badge: "Legado Protegido",
+    validado: "Consejo validado por el maestro", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   en: {
     titulo: "Voice diagnosis", subtitulo: "Tap the mic or pick a keyword. Instant answer.",
     idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening...",
-    atajos: "Sample technical words",
+    atajos: "Demo keywords", transcriptLabel: "Microphone transcript",
+    transcriptPlaceholder: "Type the exact phrase to simulate: how to change the oil",
     tuConsulta: "Your question", diagnostico: "Diagnosis", solucion: "Solution",
-    relacionados: "Related issues",
-    escuchar: "Listen aloud", validado: "Validated by the master",
-    badge: "Legacy Protected",
+    validado: "Validated by the master", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   fr: {
     titulo: "Diagnostic vocal", subtitulo: "Appuyez ou choisissez un mot. Réponse immédiate.",
     idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute...",
-    atajos: "Mots techniques d'exemple",
+    atajos: "Mots-clés de démo", transcriptLabel: "Transcript du microphone",
+    transcriptPlaceholder: "Saisissez la phrase exacte à simuler : comment changer l'huile",
     tuConsulta: "Votre question", diagnostico: "Diagnostic", solucion: "Solution",
-    relacionados: "Pannes similaires",
-    escuchar: "Écouter à voix haute", validado: "Validé par le maître",
-    badge: "Héritage Protégé",
+    validado: "Validé par le maître", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   de: {
     titulo: "Sprachdiagnose", subtitulo: "Mikro drücken oder Stichwort wählen. Sofortantwort.",
     idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre zu...",
-    atajos: "Beispiel-Stichwörter",
+    atajos: "Demo-Schlüsselwörter", transcriptLabel: "Mikrofon-Transcript",
+    transcriptPlaceholder: "Exakten Demo-Satz eingeben: Öl wechseln",
     tuConsulta: "Deine Frage", diagnostico: "Diagnose", solucion: "Lösung",
-    relacionados: "Ähnliche Pannen",
-    escuchar: "Vorlesen", validado: "Vom Meister bestätigt",
-    badge: "Erbe Geschützt",
+    validado: "Vom Meister bestätigt", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   ar: {
     titulo: "تشخيص صوتي", subtitulo: "اضغط أو اختر كلمة. الرد فوري.",
     idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع...",
-    atajos: "كلمات تقنية كمثال",
+    atajos: "كلمات العرض", transcriptLabel: "نص الميكروفون",
+    transcriptPlaceholder: "اكتب العبارة المراد محاكاتها: تغيير الزيت",
     tuConsulta: "سؤالك", diagnostico: "التشخيص", solucion: "الحل",
-    relacionados: "أعطال مشابهة",
-    escuchar: "استمع بصوت عالٍ", validado: "مصادق عليه من المعلم",
-    badge: "الإرث محمي",
+    validado: "مصادق عليه من المعلم", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
 };
 
 type Respuesta = {
-  categoria: string;
-  titulo: string;
   diagnostico: string;
   solucion: string;
   autor: string;
-  relacionados: string[];
 };
 
 const RESPUESTAS: Record<TemaKey, { label: string; data: Respuesta }> = {
-  bateria: {
-    label: "Batería",
-    data: {
-      categoria: "Eléctrico",
-      titulo: "Fallo de batería",
-      diagnostico: "Bornes sulfatados o falta de carga.",
-      solucion: "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas. Si sigue sin fuerza, usa pinzas.",
-      autor: "Paco Román (Mecánica Málaga)",
-      relacionados: ["Alternador no carga", "Motor de arranque débil", "Consumo fantasma en parado"],
-    },
-  },
   aceite: {
     label: "Aceite",
     data: {
-      categoria: "Lubricación",
-      titulo: "Revisión de aceite",
-      diagnostico: "Nivel bajo o degradación del aceite del motor.",
-      solucion: "Saca la varilla, límpiala y comprueba que esté entre las marcas. Rellena con el SAE recomendado si es necesario.",
+      diagnostico: "Nivel bajo o necesidad de cambio de fluido.",
+      solucion: "Vacía el cárter quitando el tapón inferior con el motor templado. Cambia el filtro de aceite y rellena con el SAE recomendado hasta la marca máxima de la varilla.",
       autor: "Carlos Ortiz (Experto en Diagnosis)",
-      relacionados: ["Testigo de presión de aceite", "Fugas por la tapa de balancines", "Cambio de filtro"],
     },
   },
-  distribucion: {
-    label: "Distribución",
+  bateria: {
+    label: "Batería",
     data: {
-      categoria: "Motor",
-      titulo: "Desgaste de correa de distribución",
-      diagnostico: "Desgaste térmico y cristalización del caucho.",
-      solucion: "Revisa los dientes internos de la correa. Si ves grietas milimétricas o brilla como cristal, cámbiala ya. Con el calor de Málaga sufren el doble.",
+      diagnostico: "Bornes con sulfato o falta de tensión.",
+      solucion: "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas. Si sigue sin fuerza, usa pinzas de arranque.",
+      autor: "Paco Román (Mecánica Málaga)",
+    },
+  },
+  bujia: {
+    label: "Bujía",
+    data: {
+      diagnostico: "Desgaste en los electrodos o carbonilla.",
+      solucion: "Desconecta el cable de la bujía, usa una llave de bujías para extraerla y comprueba la distancia del electrodo. Sustitúyela si está negra o gastada.",
       autor: "María José Suárez (Especialista en Motores)",
-      relacionados: ["Tensor de correa flojo", "Bomba de agua", "Saltos de diente"],
     },
   },
 };
+
+function normalizar(texto: string) {
+  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function detectarTema(transcript: string): TemaKey | null {
+  const limpio = normalizar(transcript);
+  if (limpio.includes("aceite")) return "aceite";
+  if (limpio.includes("bateria")) return "bateria";
+  if (limpio.includes("bujia")) return "bujia";
+  return null;
+}
 
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [escuchando, setEscuchando] = useState(false);
+  const [transcript, setTranscript] = useState("");
   const [tema, setTema] = useState<TemaKey | null>(null);
+  const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
+  const [mensaje, setMensaje] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const t = ui[idioma];
-  const meta = idiomas.find((i) => i.code === idioma)!;
-  const respuesta = tema ? RESPUESTAS[tema].data : null;
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const seleccionar = (k: TemaKey) => {
     if (escuchando) return;
+    setTranscript(RESPUESTAS[k].label);
     setTema(k);
+    setRespuesta(RESPUESTAS[k].data);
+    setMensaje("");
   };
 
   const handleHablar = () => {
     if (escuchando) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    setTema(null);
+    setRespuesta(null);
+    setMensaje("");
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
+      const textoReal = transcript.trim();
+      const temaDetectado = detectarTema(textoReal);
       setEscuchando(false);
-      setTema((prev) => prev ?? "bateria");
+      setTema(temaDetectado);
+      setRespuesta(temaDetectado ? RESPUESTAS[temaDetectado].data : null);
+      setMensaje(temaDetectado ? "" : t.sinConsulta);
     }, 3000);
   };
-
-  const escuchar = (str: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(str);
-    u.lang = meta.bcp47;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  };
-
-  const audioTexto = respuesta ? `${respuesta.diagnostico}. ${respuesta.solucion}` : "";
 
   return (
     <AppShell>
@@ -229,7 +225,25 @@ function Asistente() {
       </section>
 
       <section className="mt-8 px-5">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t.transcriptLabel}
+        </label>
+        <textarea
+          value={transcript}
+          onChange={(event) => {
+            setTranscript(event.target.value);
+            setTema(null);
+            setRespuesta(null);
+            setMensaje("");
+          }}
+          placeholder={t.transcriptPlaceholder}
+          rows={3}
+          className="w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-soft outline-none transition placeholder:text-muted-foreground focus:border-primary"
+        />
+      </section>
+
+      <section className="mt-5 px-5">
+        <label className="mb-2 block text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t.atajos}
         </label>
         <div className="flex flex-wrap justify-center gap-2">
@@ -250,63 +264,22 @@ function Asistente() {
         </div>
       </section>
 
-      {respuesta && (
+      {(respuesta || mensaje) && (
         <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
-          <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <span className="font-semibold">{t.tuConsulta}: </span>"{RESPUESTAS[tema!].label}"
+          <div className="mb-3 whitespace-pre-wrap rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
+            <span className="font-semibold">{t.tuConsulta}: </span>{transcript || ""}
           </div>
-          <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="text-xs font-semibold uppercase tracking-wider text-primary">
-              {respuesta.categoria}
+
+          {respuesta ? (
+            <article className="space-y-3 rounded-2xl border border-border bg-card p-5 text-[15px] leading-relaxed shadow-card">
+              <p><span className="font-bold">{t.diagnostico}: </span>{respuesta.diagnostico}</p>
+              <p><span className="font-bold">{t.solucion}: </span>{respuesta.solucion}</p>
+              <p><span className="font-bold">{t.validado}: </span>{respuesta.autor}</p>
+            </article>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-5 text-sm font-semibold text-foreground shadow-card">
+              {mensaje}
             </div>
-            <h3 className="mt-1 text-lg font-bold text-foreground">{respuesta.titulo}</h3>
-
-            <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t.diagnostico}
-            </h4>
-            <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.diagnostico}</p>
-
-            <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t.solucion}
-            </h4>
-            <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.solucion}</p>
-
-            <button
-              onClick={() => escuchar(audioTexto)}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90"
-            >
-              <Volume2 className="h-4 w-4" />
-              {t.escuchar}
-            </button>
-
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-xs text-success">
-              <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
-              <div>
-                <div className="font-bold uppercase tracking-wider">{t.badge}</div>
-                <div className="mt-0.5 font-medium">{t.validado}: {respuesta.autor}</div>
-              </div>
-            </div>
-          </article>
-
-          {respuesta.relacionados.length > 0 && (
-            <section className="mt-6">
-              <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                {t.relacionados}
-              </h4>
-              <div className="mt-2 space-y-2">
-                {respuesta.relacionados.map((r) => (
-                  <Link
-                    key={r}
-                    to="/detalle/$tema"
-                    params={{ tema: encodeURIComponent(r) }}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 text-sm shadow-soft transition hover:border-primary hover:bg-primary/5"
-                  >
-                    <span className="font-medium text-foreground">{r}</span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
-                  </Link>
-                ))}
-              </div>
-            </section>
           )}
         </section>
       )}
