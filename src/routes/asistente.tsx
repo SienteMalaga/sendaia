@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Volume2, Sparkles, ShieldCheck, ChevronRight } from "lucide-react";
+import { Mic, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export const Route = createFileRoute("/asistente")({
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/asistente")({
 });
 
 type IdiomaCode = "es" | "en" | "fr" | "de" | "ar";
-type TemaKey = "bateria" | "aceite" | "distribucion";
+type TemaKey = "aceite" | "bateria" | "bujia";
 
 const idiomas: { code: IdiomaCode; label: string; bcp47: string }[] = [
   { code: "es", label: "Español", bcp47: "es-ES" },
@@ -28,47 +28,42 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
   es: {
     titulo: "Diagnóstico por voz", subtitulo: "Pulsa el micro o elige una palabra técnica. Respuesta al instante.",
     idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando...",
-    atajos: "Palabras técnicas de ejemplo",
+    atajos: "Palabras clave de demo", transcriptLabel: "Transcript detectado por el micrófono",
+    transcriptPlaceholder: "Escribe exactamente lo que quieres simular: cómo cambiar el aceite",
     tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", solucion: "Solución",
-    relacionados: "Más averías similares",
-    escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
-    badge: "Legado Protegido",
+    validado: "Consejo validado por el maestro", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   en: {
     titulo: "Voice diagnosis", subtitulo: "Tap the mic or pick a keyword. Instant answer.",
     idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening...",
-    atajos: "Sample technical words",
+    atajos: "Demo keywords", transcriptLabel: "Microphone transcript",
+    transcriptPlaceholder: "Type the exact phrase to simulate: how to change the oil",
     tuConsulta: "Your question", diagnostico: "Diagnosis", solucion: "Solution",
-    relacionados: "Related issues",
-    escuchar: "Listen aloud", validado: "Validated by the master",
-    badge: "Legacy Protected",
+    validado: "Validated by the master", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   fr: {
     titulo: "Diagnostic vocal", subtitulo: "Appuyez ou choisissez un mot. Réponse immédiate.",
     idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute...",
-    atajos: "Mots techniques d'exemple",
+    atajos: "Mots-clés de démo", transcriptLabel: "Transcript du microphone",
+    transcriptPlaceholder: "Saisissez la phrase exacte à simuler : comment changer l'huile",
     tuConsulta: "Votre question", diagnostico: "Diagnostic", solucion: "Solution",
-    relacionados: "Pannes similaires",
-    escuchar: "Écouter à voix haute", validado: "Validé par le maître",
-    badge: "Héritage Protégé",
+    validado: "Validé par le maître", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   de: {
     titulo: "Sprachdiagnose", subtitulo: "Mikro drücken oder Stichwort wählen. Sofortantwort.",
     idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre zu...",
-    atajos: "Beispiel-Stichwörter",
+    atajos: "Demo-Schlüsselwörter", transcriptLabel: "Mikrofon-Transcript",
+    transcriptPlaceholder: "Exakten Demo-Satz eingeben: Öl wechseln",
     tuConsulta: "Deine Frage", diagnostico: "Diagnose", solucion: "Lösung",
-    relacionados: "Ähnliche Pannen",
-    escuchar: "Vorlesen", validado: "Vom Meister bestätigt",
-    badge: "Erbe Geschützt",
+    validado: "Vom Meister bestätigt", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
   ar: {
     titulo: "تشخيص صوتي", subtitulo: "اضغط أو اختر كلمة. الرد فوري.",
     idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع...",
-    atajos: "كلمات تقنية كمثال",
+    atajos: "كلمات العرض", transcriptLabel: "نص الميكروفون",
+    transcriptPlaceholder: "اكتب العبارة المراد محاكاتها: تغيير الزيت",
     tuConsulta: "سؤالك", diagnostico: "التشخيص", solucion: "الحل",
-    relacionados: "أعطال مشابهة",
-    escuchar: "استمع بصوت عالٍ", validado: "مصادق عليه من المعلم",
-    badge: "الإرث محمي",
+    validado: "مصادق عليه من المعلم", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
   },
 };
 
