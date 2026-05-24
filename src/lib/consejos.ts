@@ -11,25 +11,25 @@ export interface Consejo {
 export const consejosIniciales: Consejo[] = [
   {
     id: "1",
-    problema: "Tornillo del cárter atascado",
+    problema: "El coche no arranca",
     solucion:
-      "No lo fuerces de golpe. Dale un golpe seco con el martillo de teflón en el sentido de las agujas del reloj para asentar la rosca, y luego afloja hacia la izquierda poco a poco.",
-    autor: "Paco Román (Maestro Mecánico, Málaga)",
+      "Bornes sulfatados o escobillas pegadas. Limpia los bornes con agua y bicarbonato; si sigue sin arrancar, da tres golpes secos al motor de arranque con una llave fija mientras giras la llave.",
+    autor: "Paco Román (Mecánica Málaga)",
     categoria: "Mecánica de Coches",
   },
   {
     id: "2",
-    problema: "Prensa hidráulica hace un silbido al bajar",
+    problema: "Silbido en prensa hidráulica",
     solucion:
-      "Pérdida de presión en la junta tórica. Detén la máquina inmediatamente en el botón de emergencia para evitar dañar el retén.",
-    autor: "Manuel Benítez (Jefe de Planta, Polígono Guadalhorce)",
+      "Fuga de presión por desgaste en la junta tórica principal. Para la máquina ya con el botón de emergencia y sustituye la junta antes de que dañe el retén del pistón.",
+    autor: "Manuel Benítez (Polígono Guadalhorce)",
     categoria: "Maquinaria Industrial",
   },
   {
     id: "3",
-    problema: "Cómo revisar el desgaste de la correa de distribución",
+    problema: "Desgaste de correa de distribución",
     solucion:
-      "Pasa el dedo por la parte interna. Si notas tacto cristalizado o grietas milimétricas al trasluz, cámbiala ya. Con el calor de Málaga sufren más.",
+      "Cristalización térmica del caucho. Gira la correa y pasa el dedo por los dientes internos: si ves grietas milimétricas o brilla como cristal, cámbiala ya; con el calor de Málaga rompen antes.",
     autor: "María José Suárez (Especialista en Motores)",
     categoria: "Mecánica General",
   },
