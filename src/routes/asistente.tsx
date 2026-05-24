@@ -222,6 +222,18 @@ function Asistente() {
         ) : (
           <p className="mt-4 text-center text-sm font-medium text-muted-foreground">{t.pulsar}</p>
         )}
+        <div className="mt-6 w-full max-w-sm" dir={idioma === "ar" ? "rtl" : "ltr"}>
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t.simLabel}
+          </label>
+          <input
+            value={simulacion}
+            onChange={(e) => setSimulacion(e.target.value)}
+            placeholder={t.simPlaceholder}
+            disabled={escuchando || consultando}
+            className="w-full rounded-xl border border-dashed border-border bg-card/60 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+          />
+        </div>
       </section>
 
       <section className="mt-6 px-5" dir={idioma === "ar" ? "rtl" : "ltr"}>
