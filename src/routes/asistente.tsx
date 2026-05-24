@@ -27,53 +27,63 @@ const idiomas: { code: IdiomaCode; label: string; bcp47: string; nombre: string 
 const ui: Record<IdiomaCode, Record<string, string>> = {
   es: {
     titulo: "Diagnóstico por voz", subtitulo: "Pulsa, habla o escribe. La IA del maestro te responde.",
-    idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando tu duda...",
+    idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando al operario... Di tu duda en voz alta",
     placeholder: "Ej. El motor saca humo blanco / La fresadora no arranca",
     enviar: "Consultar al maestro", consultando: "Consultando al maestro veterano…",
     tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", pasos: "Pasos",
     consejoMaestro: "Truco del maestro", relacionados: "Más averías similares",
     escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
     badge: "Legado Protegido", error: "No pude conectar con el maestro.",
+    simLabel: "Simular lo que dice el usuario", simPlaceholder: "Ej. humo blanco en el motor",
+    demoConsulta: "El tornillo del cárter del aceite está atascado y no sale",
   },
   en: {
     titulo: "Voice diagnosis", subtitulo: "Press, speak or type. The master's AI replies.",
-    idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening...",
+    idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening to the operator... Speak your question",
     placeholder: "E.g. The engine blows white smoke / The milling machine won't start",
     enviar: "Ask the master", consultando: "Asking the veteran master…",
     tuConsulta: "Your question", diagnostico: "Diagnosis", pasos: "Steps",
     consejoMaestro: "Master's tip", relacionados: "Related issues",
     escuchar: "Listen aloud", validado: "Validated by the master",
     badge: "Legacy Protected", error: "Could not reach the master.",
+    simLabel: "Simulate what the user says", simPlaceholder: "E.g. white smoke in the engine",
+    demoConsulta: "The oil pan bolt is completely stuck and won't come out",
   },
   fr: {
     titulo: "Diagnostic vocal", subtitulo: "Appuyez, parlez ou écrivez. L'IA du maître répond.",
-    idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute...",
+    idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute de l'opérateur... Posez votre question",
     placeholder: "Ex. Le moteur dégage de la fumée blanche",
     enviar: "Demander au maître", consultando: "Consultation du maître vétéran…",
     tuConsulta: "Votre question", diagnostico: "Diagnostic", pasos: "Étapes",
     consejoMaestro: "Astuce du maître", relacionados: "Pannes similaires",
     escuchar: "Écouter à voix haute", validado: "Validé par le maître",
     badge: "Héritage Protégé", error: "Impossible de joindre le maître.",
+    simLabel: "Simuler ce que dit l'utilisateur", simPlaceholder: "Ex. fumée blanche dans le moteur",
+    demoConsulta: "Le boulon du carter d'huile est bloqué et ne sort pas",
   },
   de: {
     titulo: "Sprachdiagnose", subtitulo: "Drücken, sprechen oder schreiben. Die KI antwortet.",
-    idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre zu...",
+    idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre dem Mechaniker zu... Sprich deine Frage",
     placeholder: "Z. B. Motor qualmt weiß / Fräsmaschine startet nicht",
     enviar: "Meister fragen", consultando: "Frage den Meister…",
     tuConsulta: "Deine Frage", diagnostico: "Diagnose", pasos: "Schritte",
     consejoMaestro: "Meister-Tipp", relacionados: "Ähnliche Pannen",
     escuchar: "Vorlesen", validado: "Vom Meister bestätigt",
     badge: "Erbe Geschützt", error: "Meister nicht erreichbar.",
+    simLabel: "Simuliere, was der Benutzer sagt", simPlaceholder: "Z. B. weißer Rauch im Motor",
+    demoConsulta: "Die Ölwannenschraube sitzt fest und geht nicht heraus",
   },
   ar: {
     titulo: "تشخيص صوتي", subtitulo: "اضغط أو اكتب وسيرد عليك المعلم.",
-    idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع...",
+    idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع إلى الفني... تحدث بسؤالك",
     placeholder: "مثال: المحرك يخرج دخانًا أبيض",
     enviar: "اسأل المعلم", consultando: "جارٍ سؤال المعلم…",
     tuConsulta: "سؤالك", diagnostico: "التشخيص", pasos: "الخطوات",
     consejoMaestro: "نصيحة المعلم", relacionados: "أعطال مشابهة",
     escuchar: "استمع بصوت عالٍ", validado: "مصادق عليه من المعلم",
     badge: "الإرث محمي", error: "تعذّر الوصول إلى المعلم.",
+    simLabel: "محاكاة ما يقوله المستخدم", simPlaceholder: "مثال: دخان أبيض في المحرك",
+    demoConsulta: "برغي حوض الزيت عالق ولا يخرج",
   },
 };
 
@@ -83,6 +93,7 @@ function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [escuchando, setEscuchando] = useState(false);
   const [texto, setTexto] = useState("");
+  const [simulacion, setSimulacion] = useState("");
   const [consultando, setConsultando] = useState(false);
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -94,20 +105,7 @@ function Asistente() {
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const handleHablar = () => {
-    if (escuchando || consultando) return;
-    setRespuesta(null);
-    setErrMsg(null);
-    setEscuchando(true);
-    timerRef.current = setTimeout(() => {
-      setEscuchando(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }, 2200);
-  };
-
-  const enviar = async () => {
-    const consulta = texto.trim();
-    if (!consulta || consultando) return;
+  const lanzarConsulta = async (consulta: string) => {
     setConsultando(true);
     setErrMsg(null);
     setRespuesta(null);
@@ -119,6 +117,25 @@ function Asistente() {
     } finally {
       setConsultando(false);
     }
+  };
+
+  const handleHablar = () => {
+    if (escuchando || consultando) return;
+    setRespuesta(null);
+    setErrMsg(null);
+    setEscuchando(true);
+    timerRef.current = setTimeout(() => {
+      setEscuchando(false);
+      const consulta = simulacion.trim() || t.demoConsulta;
+      setTexto(consulta);
+      lanzarConsulta(consulta);
+    }, 4000);
+  };
+
+  const enviar = async () => {
+    const consulta = texto.trim();
+    if (!consulta || consultando) return;
+    await lanzarConsulta(consulta);
   };
 
   const escuchar = (str: string) => {
@@ -205,6 +222,18 @@ function Asistente() {
         ) : (
           <p className="mt-4 text-center text-sm font-medium text-muted-foreground">{t.pulsar}</p>
         )}
+        <div className="mt-6 w-full max-w-sm" dir={idioma === "ar" ? "rtl" : "ltr"}>
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {t.simLabel}
+          </label>
+          <input
+            value={simulacion}
+            onChange={(e) => setSimulacion(e.target.value)}
+            placeholder={t.simPlaceholder}
+            disabled={escuchando || consultando}
+            className="w-full rounded-xl border border-dashed border-border bg-card/60 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+          />
+        </div>
       </section>
 
       <section className="mt-6 px-5" dir={idioma === "ar" ? "rtl" : "ltr"}>
