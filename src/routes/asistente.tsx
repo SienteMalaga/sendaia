@@ -117,7 +117,7 @@ function Asistente() {
   const handleHablar = () => {
     if (escuchando || consultando) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    const transcript = simulacion.trim() || texto.trim();
+    const transcript = simulacion.trim();
     setRespuesta(null);
     setErrMsg(null);
     setTexto("");
