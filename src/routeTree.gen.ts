@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VeteranoRouteImport } from './routes/veterano'
+import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as AsistenteRouteImport } from './routes/asistente'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VeteranoRoute = VeteranoRouteImport.update({
   id: '/veterano',
   path: '/veterano',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BibliotecaRoute = BibliotecaRouteImport.update({
+  id: '/biblioteca',
+  path: '/biblioteca',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AsistenteRoute = AsistenteRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
+  '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
+  '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
+  '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/asistente' | '/veterano'
+  fullPaths: '/' | '/asistente' | '/biblioteca' | '/veterano'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/asistente' | '/veterano'
-  id: '__root__' | '/' | '/asistente' | '/veterano'
+  to: '/' | '/asistente' | '/biblioteca' | '/veterano'
+  id: '__root__' | '/' | '/asistente' | '/biblioteca' | '/veterano'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AsistenteRoute: typeof AsistenteRoute
+  BibliotecaRoute: typeof BibliotecaRoute
   VeteranoRoute: typeof VeteranoRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/veterano'
       fullPath: '/veterano'
       preLoaderRoute: typeof VeteranoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/biblioteca': {
+      id: '/biblioteca'
+      path: '/biblioteca'
+      fullPath: '/biblioteca'
+      preLoaderRoute: typeof BibliotecaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/asistente': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsistenteRoute: AsistenteRoute,
+  BibliotecaRoute: BibliotecaRoute,
   VeteranoRoute: VeteranoRoute,
 }
 export const routeTree = rootRouteImport
