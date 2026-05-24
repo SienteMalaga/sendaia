@@ -116,14 +116,20 @@ function Asistente() {
 
   const handleHablar = () => {
     if (escuchando || consultando) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const transcript = simulacion.trim() || texto.trim();
     setRespuesta(null);
     setErrMsg(null);
+    setTexto("");
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
       setEscuchando(false);
-      const consulta = simulacion.trim() || t.demoConsulta;
-      setTexto(consulta);
-      lanzarConsulta(consulta);
+      if (!transcript) {
+        setErrMsg("Escribe o simula una palabra técnica para que el maestro responda.");
+        return;
+      }
+      setTexto(transcript);
+      lanzarConsulta(transcript);
     }, 4000);
   };
 
