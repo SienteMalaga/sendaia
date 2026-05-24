@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VeteranoRouteImport } from './routes/veterano'
 import { Route as AsistenteRouteImport } from './routes/asistente'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VeteranoRoute = VeteranoRouteImport.update({
+  id: '/veterano',
+  path: '/veterano',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AsistenteRoute = AsistenteRouteImport.update({
   id: '/asistente',
   path: '/asistente',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
+  '/veterano': typeof VeteranoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
+  '/veterano': typeof VeteranoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
+  '/veterano': typeof VeteranoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/asistente'
+  fullPaths: '/' | '/asistente' | '/veterano'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/asistente'
-  id: '__root__' | '/' | '/asistente'
+  to: '/' | '/asistente' | '/veterano'
+  id: '__root__' | '/' | '/asistente' | '/veterano'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AsistenteRoute: typeof AsistenteRoute
+  VeteranoRoute: typeof VeteranoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/veterano': {
+      id: '/veterano'
+      path: '/veterano'
+      fullPath: '/veterano'
+      preLoaderRoute: typeof VeteranoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/asistente': {
       id: '/asistente'
       path: '/asistente'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AsistenteRoute: AsistenteRoute,
+  VeteranoRoute: VeteranoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
