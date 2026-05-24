@@ -1,142 +1,147 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Volume2, Sparkles, ShieldCheck, Send, Loader2, ChevronRight } from "lucide-react";
+import { Mic, Volume2, Sparkles, ShieldCheck, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { consultarMaestro } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/asistente")({
   head: () => ({
     meta: [
       { title: "Asistente de Voz — Senda-IA" },
-      { name: "description", content: "Asistente de diagnóstico por voz e IA multilingüe." },
+      { name: "description", content: "Asistente de diagnóstico por voz, 100% local." },
     ],
   }),
   component: Asistente,
 });
 
 type IdiomaCode = "es" | "en" | "fr" | "de" | "ar";
+type TemaKey = "bateria" | "aceite" | "distribucion";
 
-const idiomas: { code: IdiomaCode; label: string; bcp47: string; nombre: string }[] = [
-  { code: "es", label: "Español", bcp47: "es-ES", nombre: "Español" },
-  { code: "en", label: "English", bcp47: "en-US", nombre: "English" },
-  { code: "fr", label: "Français", bcp47: "fr-FR", nombre: "Français" },
-  { code: "de", label: "Deutsch", bcp47: "de-DE", nombre: "Deutsch" },
-  { code: "ar", label: "العربية", bcp47: "ar-SA", nombre: "العربية" },
+const idiomas: { code: IdiomaCode; label: string; bcp47: string }[] = [
+  { code: "es", label: "Español", bcp47: "es-ES" },
+  { code: "en", label: "English", bcp47: "en-US" },
+  { code: "fr", label: "Français", bcp47: "fr-FR" },
+  { code: "de", label: "Deutsch", bcp47: "de-DE" },
+  { code: "ar", label: "العربية", bcp47: "ar-SA" },
 ];
 
 const ui: Record<IdiomaCode, Record<string, string>> = {
   es: {
-    titulo: "Diagnóstico por voz", subtitulo: "Pulsa, habla o escribe. La IA del maestro te responde.",
-    idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando al operario... Di tu duda en voz alta",
-    placeholder: "Ej. El motor saca humo blanco / La fresadora no arranca",
-    enviar: "Consultar al maestro", consultando: "Consultando al maestro veterano…",
-    tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", pasos: "Pasos",
-    consejoMaestro: "Truco del maestro", relacionados: "Más averías similares",
+    titulo: "Diagnóstico por voz", subtitulo: "Pulsa el micro o elige una palabra técnica. Respuesta al instante.",
+    idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando...",
+    atajos: "Palabras técnicas de ejemplo",
+    tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", solucion: "Solución",
+    relacionados: "Más averías similares",
     escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
-    badge: "Legado Protegido", error: "No pude conectar con el maestro.",
-    simLabel: "Simular lo que dice el usuario", simPlaceholder: "Ej. aceite bajo / batería sin fuerza / humo blanco",
+    badge: "Legado Protegido",
   },
   en: {
-    titulo: "Voice diagnosis", subtitulo: "Press, speak or type. The master's AI replies.",
-    idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening to the operator... Speak your question",
-    placeholder: "E.g. The engine blows white smoke / The milling machine won't start",
-    enviar: "Ask the master", consultando: "Asking the veteran master…",
-    tuConsulta: "Your question", diagnostico: "Diagnosis", pasos: "Steps",
-    consejoMaestro: "Master's tip", relacionados: "Related issues",
+    titulo: "Voice diagnosis", subtitulo: "Tap the mic or pick a keyword. Instant answer.",
+    idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening...",
+    atajos: "Sample technical words",
+    tuConsulta: "Your question", diagnostico: "Diagnosis", solucion: "Solution",
+    relacionados: "Related issues",
     escuchar: "Listen aloud", validado: "Validated by the master",
-    badge: "Legacy Protected", error: "Could not reach the master.",
-    simLabel: "Simulate what the user says", simPlaceholder: "E.g. low oil / weak battery / white smoke",
+    badge: "Legacy Protected",
   },
   fr: {
-    titulo: "Diagnostic vocal", subtitulo: "Appuyez, parlez ou écrivez. L'IA du maître répond.",
-    idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute de l'opérateur... Posez votre question",
-    placeholder: "Ex. Le moteur dégage de la fumée blanche",
-    enviar: "Demander au maître", consultando: "Consultation du maître vétéran…",
-    tuConsulta: "Votre question", diagnostico: "Diagnostic", pasos: "Étapes",
-    consejoMaestro: "Astuce du maître", relacionados: "Pannes similaires",
+    titulo: "Diagnostic vocal", subtitulo: "Appuyez ou choisissez un mot. Réponse immédiate.",
+    idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute...",
+    atajos: "Mots techniques d'exemple",
+    tuConsulta: "Votre question", diagnostico: "Diagnostic", solucion: "Solution",
+    relacionados: "Pannes similaires",
     escuchar: "Écouter à voix haute", validado: "Validé par le maître",
-    badge: "Héritage Protégé", error: "Impossible de joindre le maître.",
-    simLabel: "Simuler ce que dit l'utilisateur", simPlaceholder: "Ex. huile basse / batterie faible / fumée blanche",
+    badge: "Héritage Protégé",
   },
   de: {
-    titulo: "Sprachdiagnose", subtitulo: "Drücken, sprechen oder schreiben. Die KI antwortet.",
-    idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre dem Mechaniker zu... Sprich deine Frage",
-    placeholder: "Z. B. Motor qualmt weiß / Fräsmaschine startet nicht",
-    enviar: "Meister fragen", consultando: "Frage den Meister…",
-    tuConsulta: "Deine Frage", diagnostico: "Diagnose", pasos: "Schritte",
-    consejoMaestro: "Meister-Tipp", relacionados: "Ähnliche Pannen",
+    titulo: "Sprachdiagnose", subtitulo: "Mikro drücken oder Stichwort wählen. Sofortantwort.",
+    idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre zu...",
+    atajos: "Beispiel-Stichwörter",
+    tuConsulta: "Deine Frage", diagnostico: "Diagnose", solucion: "Lösung",
+    relacionados: "Ähnliche Pannen",
     escuchar: "Vorlesen", validado: "Vom Meister bestätigt",
-    badge: "Erbe Geschützt", error: "Meister nicht erreichbar.",
-    simLabel: "Simuliere, was der Benutzer sagt", simPlaceholder: "Z. B. niedriger Ölstand / schwache Batterie / weißer Rauch",
+    badge: "Erbe Geschützt",
   },
   ar: {
-    titulo: "تشخيص صوتي", subtitulo: "اضغط أو اكتب وسيرد عليك المعلم.",
-    idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع إلى الفني... تحدث بسؤالك",
-    placeholder: "مثال: المحرك يخرج دخانًا أبيض",
-    enviar: "اسأل المعلم", consultando: "جارٍ سؤال المعلم…",
-    tuConsulta: "سؤالك", diagnostico: "التشخيص", pasos: "الخطوات",
-    consejoMaestro: "نصيحة المعلم", relacionados: "أعطال مشابهة",
+    titulo: "تشخيص صوتي", subtitulo: "اضغط أو اختر كلمة. الرد فوري.",
+    idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع...",
+    atajos: "كلمات تقنية كمثال",
+    tuConsulta: "سؤالك", diagnostico: "التشخيص", solucion: "الحل",
+    relacionados: "أعطال مشابهة",
     escuchar: "استمع بصوت عالٍ", validado: "مصادق عليه من المعلم",
-    badge: "الإرث محمي", error: "تعذّر الوصول إلى المعلم.",
-    simLabel: "محاكاة ما يقوله المستخدم", simPlaceholder: "مثال: زيت منخفض / بطارية ضعيفة / دخان أبيض",
+    badge: "الإرث محمي",
   },
 };
 
-type Respuesta = Awaited<ReturnType<typeof consultarMaestro>>;
+type Respuesta = {
+  categoria: string;
+  titulo: string;
+  diagnostico: string;
+  solucion: string;
+  autor: string;
+  relacionados: string[];
+};
+
+const RESPUESTAS: Record<TemaKey, { label: string; data: Respuesta }> = {
+  bateria: {
+    label: "Batería",
+    data: {
+      categoria: "Eléctrico",
+      titulo: "Fallo de batería",
+      diagnostico: "Bornes sulfatados o falta de carga.",
+      solucion: "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas. Si sigue sin fuerza, usa pinzas.",
+      autor: "Paco Román (Mecánica Málaga)",
+      relacionados: ["Alternador no carga", "Motor de arranque débil", "Consumo fantasma en parado"],
+    },
+  },
+  aceite: {
+    label: "Aceite",
+    data: {
+      categoria: "Lubricación",
+      titulo: "Revisión de aceite",
+      diagnostico: "Nivel bajo o degradación del aceite del motor.",
+      solucion: "Saca la varilla, límpiala y comprueba que esté entre las marcas. Rellena con el SAE recomendado si es necesario.",
+      autor: "Carlos Ortiz (Experto en Diagnosis)",
+      relacionados: ["Testigo de presión de aceite", "Fugas por la tapa de balancines", "Cambio de filtro"],
+    },
+  },
+  distribucion: {
+    label: "Distribución",
+    data: {
+      categoria: "Motor",
+      titulo: "Desgaste de correa de distribución",
+      diagnostico: "Desgaste térmico y cristalización del caucho.",
+      solucion: "Revisa los dientes internos de la correa. Si ves grietas milimétricas o brilla como cristal, cámbiala ya. Con el calor de Málaga sufren el doble.",
+      autor: "María José Suárez (Especialista en Motores)",
+      relacionados: ["Tensor de correa flojo", "Bomba de agua", "Saltos de diente"],
+    },
+  },
+};
 
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [escuchando, setEscuchando] = useState(false);
-  const [texto, setTexto] = useState("");
-  const [simulacion, setSimulacion] = useState("");
-  const [consultando, setConsultando] = useState(false);
-  const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
-  const [errMsg, setErrMsg] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [tema, setTema] = useState<TemaKey | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const t = ui[idioma];
   const meta = idiomas.find((i) => i.code === idioma)!;
+  const respuesta = tema ? RESPUESTAS[tema].data : null;
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const lanzarConsulta = async (consulta: string) => {
-    setConsultando(true);
-    setErrMsg(null);
-    setRespuesta(null);
-    try {
-      const r = await consultarMaestro({ data: { consulta, idioma: meta.nombre } });
-      setRespuesta(r);
-    } catch (e) {
-      setErrMsg((e as Error)?.message ?? t.error);
-    } finally {
-      setConsultando(false);
-    }
+  const seleccionar = (k: TemaKey) => {
+    if (escuchando) return;
+    setTema(k);
   };
 
   const handleHablar = () => {
-    if (escuchando || consultando) return;
+    if (escuchando) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    const transcript = simulacion.trim();
-    setRespuesta(null);
-    setErrMsg(null);
-    setTexto("");
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
       setEscuchando(false);
-      if (!transcript) {
-        setErrMsg("Escribe o simula una palabra técnica para que el maestro responda.");
-        return;
-      }
-      setTexto(transcript);
-      lanzarConsulta(transcript);
-    }, 4000);
-  };
-
-  const enviar = async () => {
-    const consulta = texto.trim();
-    if (!consulta || consultando) return;
-    await lanzarConsulta(consulta);
+      setTema((prev) => prev ?? "bateria");
+    }, 3000);
   };
 
   const escuchar = (str: string) => {
@@ -147,9 +152,7 @@ function Asistente() {
     speechSynthesis.speak(u);
   };
 
-  const audioTexto = respuesta
-    ? `${respuesta.diagnostico}. ${respuesta.pasos.join(". ")}. ${respuesta.consejoMaestro}`
-    : "";
+  const audioTexto = respuesta ? `${respuesta.diagnostico}. ${respuesta.solucion}` : "";
 
   return (
     <AppShell>
@@ -186,7 +189,7 @@ function Asistente() {
       <section className="mt-8 flex flex-col items-center px-5">
         <button
           onClick={handleHablar}
-          disabled={escuchando || consultando}
+          disabled={escuchando}
           className={`relative flex h-36 w-36 items-center justify-center rounded-full text-primary-foreground shadow-card transition active:scale-95 disabled:opacity-90 ${
             escuchando ? "animate-pulse" : ""
           }`}
@@ -223,58 +226,34 @@ function Asistente() {
         ) : (
           <p className="mt-4 text-center text-sm font-medium text-muted-foreground">{t.pulsar}</p>
         )}
-        <div className="mt-6 w-full max-w-sm" dir={idioma === "ar" ? "rtl" : "ltr"}>
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {t.simLabel}
-          </label>
-          <input
-            value={simulacion}
-            onChange={(e) => setSimulacion(e.target.value)}
-            placeholder={t.simPlaceholder}
-            disabled={escuchando || consultando}
-            className="w-full rounded-xl border border-dashed border-border bg-card/60 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
-          />
+      </section>
+
+      <section className="mt-8 px-5">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">
+          {t.atajos}
+        </label>
+        <div className="flex flex-wrap justify-center gap-2">
+          {(Object.keys(RESPUESTAS) as TemaKey[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => seleccionar(k)}
+              disabled={escuchando}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                tema === k
+                  ? "border-primary bg-primary text-primary-foreground shadow-soft"
+                  : "border-border bg-card text-foreground hover:border-primary/60 hover:bg-primary/5"
+              }`}
+            >
+              {RESPUESTAS[k].label}
+            </button>
+          ))}
         </div>
       </section>
 
-      <section className="mt-6 px-5" dir={idioma === "ar" ? "rtl" : "ltr"}>
-        <div className="flex gap-2 rounded-full border border-border bg-card p-1.5 shadow-soft focus-within:border-primary">
-          <input
-            ref={inputRef}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") enviar(); }}
-            placeholder={t.placeholder}
-            disabled={consultando}
-            className="flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
-          />
-          <button
-            onClick={enviar}
-            disabled={consultando || !texto.trim()}
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 disabled:opacity-50"
-          >
-            {consultando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-            {t.enviar}
-          </button>
-        </div>
-      </section>
-
-      {consultando && (
-        <div className="mt-6 flex items-center justify-center gap-2 px-5 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" /> {t.consultando}
-        </div>
-      )}
-
-      {errMsg && !consultando && (
-        <div className="mt-6 mx-5 rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {t.error} {errMsg}
-        </div>
-      )}
-
-      {respuesta && !consultando && (
+      {respuesta && (
         <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
           <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <span className="font-semibold">{t.tuConsulta}: </span>"{texto}"
+            <span className="font-semibold">{t.tuConsulta}: </span>"{RESPUESTAS[tema!].label}"
           </div>
           <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
             <div className="text-xs font-semibold uppercase tracking-wider text-primary">
@@ -288,22 +267,9 @@ function Asistente() {
             <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.diagnostico}</p>
 
             <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t.pasos}
+              {t.solucion}
             </h4>
-            <ol className="mt-2 space-y-2">
-              {respuesta.pasos.map((p, i) => (
-                <li key={i} className="flex gap-3 rounded-xl bg-secondary/60 p-3 text-sm">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                    {i + 1}
-                  </span>
-                  <span className="leading-relaxed text-foreground">{p}</span>
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-4 rounded-xl border-l-4 border-primary bg-primary/5 p-3 text-sm italic text-foreground">
-              <span className="not-italic font-semibold">{t.consejoMaestro}: </span>"{respuesta.consejoMaestro}"
-            </div>
+            <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.solucion}</p>
 
             <button
               onClick={() => escuchar(audioTexto)}
