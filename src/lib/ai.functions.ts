@@ -29,23 +29,39 @@ type AIResp = {
 
 type CasoFijo = AIResp & { autor: string };
 
-// Atajos instantáneos: si la consulta contiene estas palabras clave,
-// devolvemos la ficha al instante sin llamar a la IA (latencia ~0).
 function matchAtajo(consultaRaw: string): CasoFijo | null {
-  const c = consultaRaw.toLowerCase();
+  const c = consultaRaw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   const has = (...ws: string[]) => ws.some((w) => c.includes(w));
 
-  if (has("arranca", "arranque", "coche", "motor de arranque") && !has("humo", "aceite", "correa")) {
+  if (has("aceite", "liquido", "nivel")) {
     return {
-      titulo: "El coche no arranca",
+      titulo: "Revisión de aceite",
       categoria: "Mecánica de Coches",
-      diagnostico: "Fallo en bornes sulfatados o escobillas del motor de arranque pegadas.",
+      diagnostico: "Nivel bajo o degradación del aceite del motor.",
       pasos: [
-        "Limpia los bornes de la batería con agua y bicarbonato.",
-        "Si sigue sin arrancar, da tres golpes secos al motor de arranque con una llave fija mientras giras la llave.",
+        "Saca la varilla, límpiala, vuelve a meterla y comprueba que esté entre las dos marcas.",
+        "Si está bajo, rellena con el SAE recomendado por el fabricante. Nunca pases del máximo.",
       ],
-      consejoMaestro: "Antes de cambiar nada, escobillas y bornes: el 80% de las veces es eso.",
-      relacionados: ["Batería descargada en frío", "Cambiar motor de arranque", "Alternador no carga"],
+      consejoMaestro: "Mide siempre en plano y con el motor reposado unos minutos.",
+      relacionados: ["Fuga de aceite", "Testigo de presión", "Filtro de aceite obstruido"],
+      autor: "Carlos Ortiz (Experto en Diagnosis)",
+    };
+  }
+
+  if (has("bateria", "bornes", "arranca")) {
+    return {
+      titulo: "Fallo de batería",
+      categoria: "Mecánica de Coches",
+      diagnostico: "Bornes sulfatados o falta de carga en la batería.",
+      pasos: [
+        "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas.",
+        "Si sigue sin fuerza, usa pinzas conectando primero el positivo (+) y luego el negativo (-).",
+      ],
+      consejoMaestro: "Si cruje el relé y cae la luz, mira batería antes que motor.",
+      relacionados: ["Alternador no carga", "Relé de arranque", "Batería descargada"],
       autor: "Paco Román (Mecánica Málaga)",
     };
   }
