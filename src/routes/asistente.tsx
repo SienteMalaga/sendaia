@@ -68,49 +68,49 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
 };
 
 type Respuesta = {
-  categoria: string;
-  titulo: string;
   diagnostico: string;
   solucion: string;
   autor: string;
-  relacionados: string[];
 };
 
 const RESPUESTAS: Record<TemaKey, { label: string; data: Respuesta }> = {
-  bateria: {
-    label: "Batería",
-    data: {
-      categoria: "Eléctrico",
-      titulo: "Fallo de batería",
-      diagnostico: "Bornes sulfatados o falta de carga.",
-      solucion: "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas. Si sigue sin fuerza, usa pinzas.",
-      autor: "Paco Román (Mecánica Málaga)",
-      relacionados: ["Alternador no carga", "Motor de arranque débil", "Consumo fantasma en parado"],
-    },
-  },
   aceite: {
     label: "Aceite",
     data: {
-      categoria: "Lubricación",
-      titulo: "Revisión de aceite",
-      diagnostico: "Nivel bajo o degradación del aceite del motor.",
-      solucion: "Saca la varilla, límpiala y comprueba que esté entre las marcas. Rellena con el SAE recomendado si es necesario.",
+      diagnostico: "Nivel bajo o necesidad de cambio de fluido.",
+      solucion: "Vacía el cárter quitando el tapón inferior con el motor templado. Cambia el filtro de aceite y rellena con el SAE recomendado hasta la marca máxima de la varilla.",
       autor: "Carlos Ortiz (Experto en Diagnosis)",
-      relacionados: ["Testigo de presión de aceite", "Fugas por la tapa de balancines", "Cambio de filtro"],
     },
   },
-  distribucion: {
-    label: "Distribución",
+  bateria: {
+    label: "Batería",
     data: {
-      categoria: "Motor",
-      titulo: "Desgaste de correa de distribución",
-      diagnostico: "Desgaste térmico y cristalización del caucho.",
-      solucion: "Revisa los dientes internos de la correa. Si ves grietas milimétricas o brilla como cristal, cámbiala ya. Con el calor de Málaga sufren el doble.",
+      diagnostico: "Bornes con sulfato o falta de tensión.",
+      solucion: "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas. Si sigue sin fuerza, usa pinzas de arranque.",
+      autor: "Paco Román (Mecánica Málaga)",
+    },
+  },
+  bujia: {
+    label: "Bujía",
+    data: {
+      diagnostico: "Desgaste en los electrodos o carbonilla.",
+      solucion: "Desconecta el cable de la bujía, usa una llave de bujías para extraerla y comprueba la distancia del electrodo. Sustitúyela si está negra o gastada.",
       autor: "María José Suárez (Especialista en Motores)",
-      relacionados: ["Tensor de correa flojo", "Bomba de agua", "Saltos de diente"],
     },
   },
 };
+
+function normalizar(texto: string) {
+  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function detectarTema(transcript: string): TemaKey | null {
+  const limpio = normalizar(transcript);
+  if (limpio.includes("aceite")) return "aceite";
+  if (limpio.includes("bateria")) return "bateria";
+  if (limpio.includes("bujia")) return "bujia";
+  return null;
+}
 
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
