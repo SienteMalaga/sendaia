@@ -1,13 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Volume2, Sparkles, ShieldCheck } from "lucide-react";
+import { Mic, Volume2, Sparkles, ShieldCheck, Send, Loader2, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { consultarMaestro } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/asistente")({
   head: () => ({
     meta: [
       { title: "Asistente de Voz — Senda-IA" },
-      { name: "description", content: "Asistente de diagnóstico por voz multilingüe." },
+      { name: "description", content: "Asistente de diagnóstico por voz e IA multilingüe." },
     ],
   }),
   component: Asistente,
@@ -15,152 +16,122 @@ export const Route = createFileRoute("/asistente")({
 
 type IdiomaCode = "es" | "en" | "fr" | "de" | "ar";
 
-const idiomas: { code: IdiomaCode; label: string; bcp47: string }[] = [
-  { code: "es", label: "Español", bcp47: "es-ES" },
-  { code: "en", label: "English", bcp47: "en-US" },
-  { code: "fr", label: "Français", bcp47: "fr-FR" },
-  { code: "de", label: "Deutsch", bcp47: "de-DE" },
-  { code: "ar", label: "العربية", bcp47: "ar-SA" },
+const idiomas: { code: IdiomaCode; label: string; bcp47: string; nombre: string }[] = [
+  { code: "es", label: "Español", bcp47: "es-ES", nombre: "Español" },
+  { code: "en", label: "English", bcp47: "en-US", nombre: "English" },
+  { code: "fr", label: "Français", bcp47: "fr-FR", nombre: "Français" },
+  { code: "de", label: "Deutsch", bcp47: "de-DE", nombre: "Deutsch" },
+  { code: "ar", label: "العربية", bcp47: "ar-SA", nombre: "العربية" },
 ];
 
-type Traduccion = {
-  consulta: string;
-  problema: string;
-  solucion: string;
-  autor: string;
-  categoria: string;
-  badge: string;
-  validado: string;
-  escuchar: string;
-  escuchando: string;
-  pulsar: string;
-  subtitulo: string;
-  titulo: string;
-  idiomaLabel: string;
-  tuConsulta: string;
-};
-
-const traducciones: Record<IdiomaCode, Traduccion> = {
+const ui: Record<IdiomaCode, Record<string, string>> = {
   es: {
-    titulo: "Diagnóstico por voz",
-    subtitulo: "Pulsa, habla en tu idioma y escucha al maestro.",
-    idiomaLabel: "Idioma",
-    pulsar: "Pulsar para Hablar",
-    escuchando: "Escuchando tu duda...",
-    tuConsulta: "Texto detectado por voz",
-    consulta: "El tornillo del cárter está totalmente atascado y no sale",
-    categoria: "Mecánica de Coches",
-    problema: "Tornillo del cárter atascado",
-    solucion:
-      "No lo fuerces de golpe. Dale un golpe seco con el martillo de teflón en el sentido de las agujas del reloj para asentar la rosca, y luego afloja hacia la izquierda poco a poco.",
-    autor: "Paco Román (Maestro Mecánico, Málaga)",
-    badge: "Legado Protegido",
-    validado: "Consejo validado por el maestro",
-    escuchar: "Escuchar explicación de viva voz",
+    titulo: "Diagnóstico por voz", subtitulo: "Pulsa, habla o escribe. La IA del maestro te responde.",
+    idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando tu duda...",
+    placeholder: "Ej. El motor saca humo blanco / La fresadora no arranca",
+    enviar: "Consultar al maestro", consultando: "Consultando al maestro veterano…",
+    tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", pasos: "Pasos",
+    consejoMaestro: "Truco del maestro", relacionados: "Más averías similares",
+    escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
+    badge: "Legado Protegido", error: "No pude conectar con el maestro.",
   },
   en: {
-    titulo: "Voice diagnosis",
-    subtitulo: "Press, speak in your language and listen to the master.",
-    idiomaLabel: "Language",
-    pulsar: "Press to Speak",
-    escuchando: "Listening to your question...",
-    tuConsulta: "Voice-detected text",
-    consulta: "The oil pan bolt is completely stuck and won't come out",
-    categoria: "Car Mechanics",
-    problema: "Stuck oil pan bolt",
-    solucion:
-      "Don't force it all at once. Give it a sharp tap with the teflon hammer clockwise to seat the thread, then loosen it slowly to the left.",
-    autor: "Paco Román (Master Mechanic, Málaga)",
-    badge: "Legacy Protected",
-    validado: "Advice validated by the master",
-    escuchar: "Listen to the explanation aloud",
+    titulo: "Voice diagnosis", subtitulo: "Press, speak or type. The master's AI replies.",
+    idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening...",
+    placeholder: "E.g. The engine blows white smoke / The milling machine won't start",
+    enviar: "Ask the master", consultando: "Asking the veteran master…",
+    tuConsulta: "Your question", diagnostico: "Diagnosis", pasos: "Steps",
+    consejoMaestro: "Master's tip", relacionados: "Related issues",
+    escuchar: "Listen aloud", validado: "Validated by the master",
+    badge: "Legacy Protected", error: "Could not reach the master.",
   },
   fr: {
-    titulo: "Diagnostic vocal",
-    subtitulo: "Appuyez, parlez dans votre langue et écoutez le maître.",
-    idiomaLabel: "Langue",
-    pulsar: "Appuyer pour Parler",
-    escuchando: "Écoute de votre question...",
-    tuConsulta: "Texte détecté par la voix",
-    consulta: "Le boulon du carter est complètement coincé et ne sort pas",
-    categoria: "Mécanique Auto",
-    problema: "Boulon du carter coincé",
-    solucion:
-      "Ne le forcez pas d'un coup. Donnez un coup sec avec le marteau en téflon dans le sens des aiguilles d'une montre pour replacer le filetage, puis desserrez lentement vers la gauche.",
-    autor: "Paco Román (Maître Mécanicien, Málaga)",
-    badge: "Héritage Protégé",
-    validado: "Conseil validé par le maître",
-    escuchar: "Écouter l'explication à voix haute",
+    titulo: "Diagnostic vocal", subtitulo: "Appuyez, parlez ou écrivez. L'IA du maître répond.",
+    idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute...",
+    placeholder: "Ex. Le moteur dégage de la fumée blanche",
+    enviar: "Demander au maître", consultando: "Consultation du maître vétéran…",
+    tuConsulta: "Votre question", diagnostico: "Diagnostic", pasos: "Étapes",
+    consejoMaestro: "Astuce du maître", relacionados: "Pannes similaires",
+    escuchar: "Écouter à voix haute", validado: "Validé par le maître",
+    badge: "Héritage Protégé", error: "Impossible de joindre le maître.",
   },
   de: {
-    titulo: "Sprachdiagnose",
-    subtitulo: "Drücken, in deiner Sprache sprechen und dem Meister zuhören.",
-    idiomaLabel: "Sprache",
-    pulsar: "Drücken zum Sprechen",
-    escuchando: "Höre deine Frage...",
-    tuConsulta: "Per Sprache erkannter Text",
-    consulta: "Die Ölwannenschraube ist komplett festgefressen und geht nicht raus",
-    categoria: "KFZ-Mechanik",
-    problema: "Festsitzende Ölwannenschraube",
-    solucion:
-      "Nicht mit Gewalt lösen. Gib ihr einen kurzen Schlag mit dem Teflonhammer im Uhrzeigersinn, um das Gewinde zu setzen, und löse sie dann langsam nach links.",
-    autor: "Paco Román (Meistermechaniker, Málaga)",
-    badge: "Erbe Geschützt",
-    validado: "Vom Meister bestätigter Rat",
-    escuchar: "Erklärung laut anhören",
+    titulo: "Sprachdiagnose", subtitulo: "Drücken, sprechen oder schreiben. Die KI antwortet.",
+    idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre zu...",
+    placeholder: "Z. B. Motor qualmt weiß / Fräsmaschine startet nicht",
+    enviar: "Meister fragen", consultando: "Frage den Meister…",
+    tuConsulta: "Deine Frage", diagnostico: "Diagnose", pasos: "Schritte",
+    consejoMaestro: "Meister-Tipp", relacionados: "Ähnliche Pannen",
+    escuchar: "Vorlesen", validado: "Vom Meister bestätigt",
+    badge: "Erbe Geschützt", error: "Meister nicht erreichbar.",
   },
   ar: {
-    titulo: "تشخيص صوتي",
-    subtitulo: "اضغط، تحدث بلغتك واستمع إلى المعلم.",
-    idiomaLabel: "اللغة",
-    pulsar: "اضغط للتحدث",
-    escuchando: "جارٍ الاستماع إلى سؤالك...",
-    tuConsulta: "النص المكتشف صوتيًا",
-    consulta: "مسمار حوض الزيت عالق تمامًا ولا يخرج",
-    categoria: "ميكانيكا السيارات",
-    problema: "مسمار حوض الزيت عالق",
-    solucion:
-      "لا تستخدم القوة دفعة واحدة. اطرقه طرقة حادة بمطرقة التفلون باتجاه عقارب الساعة لتثبيت السن، ثم فكّه ببطء نحو اليسار.",
-    autor: "باكو رومان (معلم ميكانيكي، مالقة)",
-    badge: "الإرث محمي",
-    validado: "نصيحة مصدّقة من المعلم",
-    escuchar: "استمع إلى الشرح بصوت عالٍ",
+    titulo: "تشخيص صوتي", subtitulo: "اضغط أو اكتب وسيرد عليك المعلم.",
+    idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع...",
+    placeholder: "مثال: المحرك يخرج دخانًا أبيض",
+    enviar: "اسأل المعلم", consultando: "جارٍ سؤال المعلم…",
+    tuConsulta: "سؤالك", diagnostico: "التشخيص", pasos: "الخطوات",
+    consejoMaestro: "نصيحة المعلم", relacionados: "أعطال مشابهة",
+    escuchar: "استمع بصوت عالٍ", validado: "مصادق عليه من المعلم",
+    badge: "الإرث محمي", error: "تعذّر الوصول إلى المعلم.",
   },
 };
+
+type Respuesta = Awaited<ReturnType<typeof consultarMaestro>>;
 
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [escuchando, setEscuchando] = useState(false);
-  const [mostrarRespuesta, setMostrarRespuesta] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [consultando, setConsultando] = useState(false);
+  const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const t = traducciones[idioma];
-  const bcp47 = idiomas.find((i) => i.code === idioma)?.bcp47 ?? "es-ES";
+  const t = ui[idioma];
+  const meta = idiomas.find((i) => i.code === idioma)!;
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   const handleHablar = () => {
-    if (escuchando) return;
-    setMostrarRespuesta(false);
+    if (escuchando || consultando) return;
+    setRespuesta(null);
+    setErrMsg(null);
     setEscuchando(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setEscuchando(false);
-      setMostrarRespuesta(true);
-    }, 3000);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }, 2200);
   };
 
-  const escucharConsejo = (texto: string) => {
+  const enviar = async () => {
+    const consulta = texto.trim();
+    if (!consulta || consultando) return;
+    setConsultando(true);
+    setErrMsg(null);
+    setRespuesta(null);
+    try {
+      const r = await consultarMaestro({ data: { consulta, idioma: meta.nombre } });
+      setRespuesta(r);
+    } catch (e) {
+      setErrMsg((e as Error)?.message ?? t.error);
+    } finally {
+      setConsultando(false);
+    }
+  };
+
+  const escuchar = (str: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(texto);
-    u.lang = bcp47;
+    const u = new SpeechSynthesisUtterance(str);
+    u.lang = meta.bcp47;
     speechSynthesis.cancel();
     speechSynthesis.speak(u);
   };
+
+  const audioTexto = respuesta
+    ? `${respuesta.diagnostico}. ${respuesta.pasos.join(". ")}. ${respuesta.consejoMaestro}`
+    : "";
 
   return (
     <AppShell>
@@ -194,11 +165,11 @@ function Asistente() {
         </div>
       </section>
 
-      <section className="mt-10 flex flex-col items-center px-5">
+      <section className="mt-8 flex flex-col items-center px-5">
         <button
           onClick={handleHablar}
-          disabled={escuchando}
-          className={`relative flex h-44 w-44 items-center justify-center rounded-full text-primary-foreground shadow-card transition active:scale-95 ${
+          disabled={escuchando || consultando}
+          className={`relative flex h-36 w-36 items-center justify-center rounded-full text-primary-foreground shadow-card transition active:scale-95 disabled:opacity-90 ${
             escuchando ? "animate-pulse" : ""
           }`}
           style={{
@@ -213,50 +184,100 @@ function Asistente() {
               <span className="absolute -inset-2 animate-ping rounded-full bg-red-500/20 [animation-delay:200ms]" />
             </>
           )}
-          <Mic className="h-16 w-16" />
+          <Mic className="h-12 w-12" />
         </button>
 
         {escuchando ? (
-          <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="mt-5 flex flex-col items-center gap-3">
             <p className="text-center text-sm font-semibold text-red-600 animate-pulse">
               {t.escuchando}
             </p>
-            <div className="flex items-end gap-1 h-8">
+            <div className="flex h-7 items-end gap-1">
               {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                 <span
                   key={i}
                   className="w-1.5 rounded-full bg-red-500"
-                  style={{
-                    animation: `wave 0.9s ease-in-out ${i * 0.1}s infinite`,
-                    height: "100%",
-                  }}
+                  style={{ animation: `wave 0.9s ease-in-out ${i * 0.1}s infinite`, height: "100%" }}
                 />
               ))}
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-center text-sm font-medium text-muted-foreground">
-            {t.pulsar}
-          </p>
+          <p className="mt-4 text-center text-sm font-medium text-muted-foreground">{t.pulsar}</p>
         )}
       </section>
 
-      {mostrarRespuesta && !escuchando && (
-        <section className="mt-8 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
+      <section className="mt-6 px-5" dir={idioma === "ar" ? "rtl" : "ltr"}>
+        <div className="flex gap-2 rounded-full border border-border bg-card p-1.5 shadow-soft focus-within:border-primary">
+          <input
+            ref={inputRef}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") enviar(); }}
+            placeholder={t.placeholder}
+            disabled={consultando}
+            className="flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+          />
+          <button
+            onClick={enviar}
+            disabled={consultando || !texto.trim()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 disabled:opacity-50"
+          >
+            {consultando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            {t.enviar}
+          </button>
+        </div>
+      </section>
+
+      {consultando && (
+        <div className="mt-6 flex items-center justify-center gap-2 px-5 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" /> {t.consultando}
+        </div>
+      )}
+
+      {errMsg && !consultando && (
+        <div className="mt-6 mx-5 rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          {t.error} {errMsg}
+        </div>
+      )}
+
+      {respuesta && !consultando && (
+        <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
           <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <span className="font-semibold">{t.tuConsulta}: </span>
-            "{t.consulta}"
+            <span className="font-semibold">{t.tuConsulta}: </span>"{texto}"
           </div>
           <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
             <div className="text-xs font-semibold uppercase tracking-wider text-primary">
-              {t.categoria}
+              {respuesta.categoria}
             </div>
-            <h3 className="mt-1 text-lg font-bold text-foreground">{t.problema}</h3>
-            <p className="mt-2 text-[15px] leading-relaxed text-foreground">{t.solucion}</p>
+            <h3 className="mt-1 text-lg font-bold text-foreground">{respuesta.titulo}</h3>
+
+            <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {t.diagnostico}
+            </h4>
+            <p className="mt-1 text-[15px] leading-relaxed text-foreground">{respuesta.diagnostico}</p>
+
+            <h4 className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              {t.pasos}
+            </h4>
+            <ol className="mt-2 space-y-2">
+              {respuesta.pasos.map((p, i) => (
+                <li key={i} className="flex gap-3 rounded-xl bg-secondary/60 p-3 text-sm">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed text-foreground">{p}</span>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-4 rounded-xl border-l-4 border-primary bg-primary/5 p-3 text-sm italic text-foreground">
+              <span className="not-italic font-semibold">{t.consejoMaestro}: </span>"{respuesta.consejoMaestro}"
+            </div>
 
             <button
-              onClick={() => escucharConsejo(t.solucion)}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90"
+              onClick={() => escuchar(audioTexto)}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90"
             >
               <Volume2 className="h-4 w-4" />
               {t.escuchar}
@@ -266,20 +287,36 @@ function Asistente() {
               <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
               <div>
                 <div className="font-bold uppercase tracking-wider">{t.badge}</div>
-                <div className="mt-0.5 font-medium">
-                  {t.validado}: {t.autor}
-                </div>
+                <div className="mt-0.5 font-medium">{t.validado}: {respuesta.autor}</div>
               </div>
             </div>
           </article>
+
+          {respuesta.relacionados.length > 0 && (
+            <section className="mt-6">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                {t.relacionados}
+              </h4>
+              <div className="mt-2 space-y-2">
+                {respuesta.relacionados.map((r) => (
+                  <Link
+                    key={r}
+                    to="/detalle/$tema"
+                    params={{ tema: encodeURIComponent(r) }}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 text-sm shadow-soft transition hover:border-primary hover:bg-primary/5"
+                  >
+                    <span className="font-medium text-foreground">{r}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
       )}
 
       <style>{`
-        @keyframes wave {
-          0%, 100% { transform: scaleY(0.3); }
-          50% { transform: scaleY(1); }
-        }
+        @keyframes wave { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
       `}</style>
     </AppShell>
   );

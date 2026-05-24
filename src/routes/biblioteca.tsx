@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Volume2, Car, Factory, Wrench } from "lucide-react";
+import { Search, Car, Factory, Wrench, Sparkles, Loader2, ChevronRight } from "lucide-react";
 import { loadConsejos, type Categoria, type Consejo } from "@/lib/consejos";
+import { consultarMaestro } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/biblioteca")({
   head: () => ({
@@ -20,23 +21,30 @@ const iconos: Record<Categoria, typeof Car> = {
   "Mecánica General": Wrench,
 };
 
+type Sugerencia = { titulo: string; categoria: string; autor: string };
+
 function Biblioteca() {
   const [consejos, setConsejos] = useState<Consejo[]>([]);
   const [q, setQ] = useState("");
+  const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setConsejos(loadConsejos());
   }, []);
 
+  // Búsqueda local en los consejos guardados
   const grupos = useMemo(() => {
-    const filtrados = consejos.filter((c) => {
-      const t = q.toLowerCase();
-      return (
-        c.problema.toLowerCase().includes(t) ||
-        c.solucion.toLowerCase().includes(t) ||
-        c.autor.toLowerCase().includes(t)
-      );
-    });
+    const t = q.toLowerCase().trim();
+    const filtrados = !t
+      ? consejos
+      : consejos.filter(
+          (c) =>
+            c.problema.toLowerCase().includes(t) ||
+            c.solucion.toLowerCase().includes(t) ||
+            c.autor.toLowerCase().includes(t),
+        );
     const map = new Map<Categoria, Consejo[]>();
     for (const c of filtrados) {
       const arr = map.get(c.categoria) ?? [];
@@ -46,13 +54,38 @@ function Biblioteca() {
     return Array.from(map.entries());
   }, [consejos, q]);
 
-  const escuchar = (texto: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(texto);
-    u.lang = "es-ES";
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  };
+  // Generación dinámica con IA cuando el usuario busca algo nuevo
+  useEffect(() => {
+    const texto = q.trim();
+    setErrMsg(null);
+    if (texto.length < 4) {
+      setSugerencias([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      setCargando(true);
+      try {
+        const r = await consultarMaestro({ data: { consulta: texto, idioma: "Español" } });
+        const items: Sugerencia[] = [
+          { titulo: r.titulo, categoria: r.categoria, autor: r.autor },
+          ...r.relacionados.map((rel) => ({
+            titulo: rel,
+            categoria: r.categoria,
+            autor: r.autor,
+          })),
+        ];
+        setSugerencias(items);
+      } catch (e) {
+        setErrMsg((e as Error)?.message ?? "No se pudo consultar al maestro.");
+        setSugerencias([]);
+      } finally {
+        setCargando(false);
+      }
+    }, 700);
+    return () => clearTimeout(handle);
+  }, [q]);
+
+  const totalLocal = grupos.reduce((acc, [, items]) => acc + items.length, 0);
 
   return (
     <AppShell>
@@ -62,7 +95,7 @@ function Biblioteca() {
         </span>
         <h1 className="mt-1 text-2xl font-bold">Consejos guardados</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          El saber del taller, ordenado y a tu alcance.
+          Busca cualquier avería: si no está, el maestro IA la genera para ti.
         </p>
       </header>
 
@@ -72,16 +105,61 @@ function Biblioteca() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar problema, autor o palabra clave…"
+            placeholder="Ej. humo blanco motor, alternador, fresadora…"
             className="w-full rounded-full border border-border bg-card py-3 pl-10 pr-4 text-sm shadow-soft outline-none focus:border-primary"
           />
         </div>
       </div>
 
-      <div className="mt-6 space-y-6 px-5">
+      {/* Sugerencias generadas por IA */}
+      {q.trim().length >= 4 && (
+        <section className="mt-6 px-5">
+          <div className="mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-bold uppercase tracking-wider">
+              Resultados del maestro IA
+            </h2>
+          </div>
+          {cargando ? (
+            <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Generando ficha para "{q}"…
+            </div>
+          ) : errMsg ? (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+              {errMsg}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sugerencias.map((s) => (
+                <Link
+                  key={s.titulo}
+                  to="/detalle/$tema"
+                  params={{ tema: encodeURIComponent(s.titulo) }}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft transition hover:border-primary hover:bg-primary/5"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold text-foreground">{s.titulo}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {s.categoria} · ✓ {s.autor}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Casos guardados */}
+      <div className="mt-8 space-y-6 px-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
+          Saber del taller {totalLocal > 0 && <span className="text-muted-foreground">({totalLocal})</span>}
+        </h2>
         {grupos.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Sin resultados.
+            Sin consejos guardados todavía.
           </div>
         )}
         {grupos.map(([cat, items]) => {
@@ -92,34 +170,30 @@ function Biblioteca() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Icon className="h-4 w-4" />
                 </div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
                   {cat}
-                </h2>
+                </h3>
                 <span className="text-xs text-muted-foreground">({items.length})</span>
               </div>
               <div className="space-y-3">
                 {items.map((c) => (
-                  <article
+                  <Link
                     key={c.id}
-                    className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+                    to="/detalle/$tema"
+                    params={{ tema: encodeURIComponent(c.problema) }}
+                    className="block rounded-2xl border border-border bg-card p-4 shadow-soft transition hover:border-primary hover:bg-primary/5"
                   >
-                    <h3 className="font-bold text-foreground">{c.problema}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-foreground/90">
+                    <h4 className="font-bold text-foreground">{c.problema}</h4>
+                    <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-foreground/90">
                       {c.solucion}
                     </p>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-success">
-                        ✓ {c.autor}
+                      <span className="text-xs font-medium text-success">✓ {c.autor}</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                        Ver ficha <ChevronRight className="h-3.5 w-3.5" />
                       </span>
-                      <button
-                        onClick={() => escuchar(c.solucion)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-accent"
-                      >
-                        <Volume2 className="h-3.5 w-3.5" />
-                        Escuchar
-                      </button>
                     </div>
-                  </article>
+                  </Link>
                 ))}
               </div>
             </section>

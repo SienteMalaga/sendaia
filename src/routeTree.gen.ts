@@ -13,6 +13,7 @@ import { Route as VeteranoRouteImport } from './routes/veterano'
 import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as AsistenteRouteImport } from './routes/asistente'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DetalleTemaRouteImport } from './routes/detalle.$tema'
 
 const VeteranoRoute = VeteranoRouteImport.update({
   id: '/veterano',
@@ -34,18 +35,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DetalleTemaRoute = DetalleTemaRouteImport.update({
+  id: '/detalle/$tema',
+  path: '/detalle/$tema',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/detalle/$tema': typeof DetalleTemaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/detalle/$tema': typeof DetalleTemaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/detalle/$tema': typeof DetalleTemaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/asistente' | '/biblioteca' | '/veterano'
+  fullPaths: '/' | '/asistente' | '/biblioteca' | '/veterano' | '/detalle/$tema'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/asistente' | '/biblioteca' | '/veterano'
-  id: '__root__' | '/' | '/asistente' | '/biblioteca' | '/veterano'
+  to: '/' | '/asistente' | '/biblioteca' | '/veterano' | '/detalle/$tema'
+  id:
+    | '__root__'
+    | '/'
+    | '/asistente'
+    | '/biblioteca'
+    | '/veterano'
+    | '/detalle/$tema'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +82,7 @@ export interface RootRouteChildren {
   AsistenteRoute: typeof AsistenteRoute
   BibliotecaRoute: typeof BibliotecaRoute
   VeteranoRoute: typeof VeteranoRoute
+  DetalleTemaRoute: typeof DetalleTemaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/detalle/$tema': {
+      id: '/detalle/$tema'
+      path: '/detalle/$tema'
+      fullPath: '/detalle/$tema'
+      preLoaderRoute: typeof DetalleTemaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   AsistenteRoute: AsistenteRoute,
   BibliotecaRoute: BibliotecaRoute,
   VeteranoRoute: VeteranoRoute,
+  DetalleTemaRoute: DetalleTemaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
