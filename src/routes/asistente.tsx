@@ -34,8 +34,7 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
     consejoMaestro: "Truco del maestro", relacionados: "Más averías similares",
     escuchar: "Escuchar explicación de viva voz", validado: "Consejo validado por el maestro",
     badge: "Legado Protegido", error: "No pude conectar con el maestro.",
-    simLabel: "Simular lo que dice el usuario", simPlaceholder: "Ej. humo blanco en el motor",
-    demoConsulta: "El coche no arranca por la mañana",
+    simLabel: "Simular lo que dice el usuario", simPlaceholder: "Ej. aceite bajo / batería sin fuerza / humo blanco",
   },
   en: {
     titulo: "Voice diagnosis", subtitulo: "Press, speak or type. The master's AI replies.",
@@ -46,8 +45,7 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
     consejoMaestro: "Master's tip", relacionados: "Related issues",
     escuchar: "Listen aloud", validado: "Validated by the master",
     badge: "Legacy Protected", error: "Could not reach the master.",
-    simLabel: "Simulate what the user says", simPlaceholder: "E.g. white smoke in the engine",
-    demoConsulta: "The oil pan bolt is completely stuck and won't come out",
+    simLabel: "Simulate what the user says", simPlaceholder: "E.g. low oil / weak battery / white smoke",
   },
   fr: {
     titulo: "Diagnostic vocal", subtitulo: "Appuyez, parlez ou écrivez. L'IA du maître répond.",
@@ -58,8 +56,7 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
     consejoMaestro: "Astuce du maître", relacionados: "Pannes similaires",
     escuchar: "Écouter à voix haute", validado: "Validé par le maître",
     badge: "Héritage Protégé", error: "Impossible de joindre le maître.",
-    simLabel: "Simuler ce que dit l'utilisateur", simPlaceholder: "Ex. fumée blanche dans le moteur",
-    demoConsulta: "Le boulon du carter d'huile est bloqué et ne sort pas",
+    simLabel: "Simuler ce que dit l'utilisateur", simPlaceholder: "Ex. huile basse / batterie faible / fumée blanche",
   },
   de: {
     titulo: "Sprachdiagnose", subtitulo: "Drücken, sprechen oder schreiben. Die KI antwortet.",
@@ -70,8 +67,7 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
     consejoMaestro: "Meister-Tipp", relacionados: "Ähnliche Pannen",
     escuchar: "Vorlesen", validado: "Vom Meister bestätigt",
     badge: "Erbe Geschützt", error: "Meister nicht erreichbar.",
-    simLabel: "Simuliere, was der Benutzer sagt", simPlaceholder: "Z. B. weißer Rauch im Motor",
-    demoConsulta: "Die Ölwannenschraube sitzt fest und geht nicht heraus",
+    simLabel: "Simuliere, was der Benutzer sagt", simPlaceholder: "Z. B. niedriger Ölstand / schwache Batterie / weißer Rauch",
   },
   ar: {
     titulo: "تشخيص صوتي", subtitulo: "اضغط أو اكتب وسيرد عليك المعلم.",
@@ -82,8 +78,7 @@ const ui: Record<IdiomaCode, Record<string, string>> = {
     consejoMaestro: "نصيحة المعلم", relacionados: "أعطال مشابهة",
     escuchar: "استمع بصوت عالٍ", validado: "مصادق عليه من المعلم",
     badge: "الإرث محمي", error: "تعذّر الوصول إلى المعلم.",
-    simLabel: "محاكاة ما يقوله المستخدم", simPlaceholder: "مثال: دخان أبيض في المحرك",
-    demoConsulta: "برغي حوض الزيت عالق ولا يخرج",
+    simLabel: "محاكاة ما يقوله المستخدم", simPlaceholder: "مثال: زيت منخفض / بطارية ضعيفة / دخان أبيض",
   },
 };
 
@@ -121,14 +116,20 @@ function Asistente() {
 
   const handleHablar = () => {
     if (escuchando || consultando) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const transcript = simulacion.trim();
     setRespuesta(null);
     setErrMsg(null);
+    setTexto("");
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
       setEscuchando(false);
-      const consulta = simulacion.trim() || t.demoConsulta;
-      setTexto(consulta);
-      lanzarConsulta(consulta);
+      if (!transcript) {
+        setErrMsg("Escribe o simula una palabra técnica para que el maestro responda.");
+        return;
+      }
+      setTexto(transcript);
+      lanzarConsulta(transcript);
     }, 4000);
   };
 
