@@ -266,8 +266,8 @@ function Asistente() {
 
       {(respuesta || mensaje) && (
         <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
-          <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <span className="font-semibold">{t.tuConsulta}: </span>{transcript.trim() || "—"}
+          <div className="mb-3 whitespace-pre-wrap rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
+            <span className="font-semibold">{t.tuConsulta}: </span>{transcript || ""}
           </div>
 
           {respuesta ? (
