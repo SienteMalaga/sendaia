@@ -72,10 +72,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Senda-IaMalaga2026" },
+      { title: "SendaIA" },
       { name: "description", content: "Protegiendo el legado de nuestros maestros." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "SendaIA" },
+      { name: "twitter:title", content: "SendaIA" },
+      { property: "og:description", content: "Protegiendo el legado de nuestros maestros." },
+      { name: "twitter:description", content: "Protegiendo el legado de nuestros maestros." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/24804cbe-04b4-4382-b6d5-5db1608c50c0/id-preview-fb8593b1--6aa1636e-5108-45ce-8305-d355c1d48083.lovable.app-1779622547443.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/24804cbe-04b4-4382-b6d5-5db1608c50c0/id-preview-fb8593b1--6aa1636e-5108-45ce-8305-d355c1d48083.lovable.app-1779622547443.png" },
     ],
     links: [
       {
