@@ -93,6 +93,7 @@ function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [escuchando, setEscuchando] = useState(false);
   const [texto, setTexto] = useState("");
+  const [simulacion, setSimulacion] = useState("");
   const [consultando, setConsultando] = useState(false);
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -104,20 +105,7 @@ function Asistente() {
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const handleHablar = () => {
-    if (escuchando || consultando) return;
-    setRespuesta(null);
-    setErrMsg(null);
-    setEscuchando(true);
-    timerRef.current = setTimeout(() => {
-      setEscuchando(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }, 2200);
-  };
-
-  const enviar = async () => {
-    const consulta = texto.trim();
-    if (!consulta || consultando) return;
+  const lanzarConsulta = async (consulta: string) => {
     setConsultando(true);
     setErrMsg(null);
     setRespuesta(null);
@@ -129,6 +117,25 @@ function Asistente() {
     } finally {
       setConsultando(false);
     }
+  };
+
+  const handleHablar = () => {
+    if (escuchando || consultando) return;
+    setRespuesta(null);
+    setErrMsg(null);
+    setEscuchando(true);
+    timerRef.current = setTimeout(() => {
+      setEscuchando(false);
+      const consulta = simulacion.trim() || t.demoConsulta;
+      setTexto(consulta);
+      lanzarConsulta(consulta);
+    }, 4000);
+  };
+
+  const enviar = async () => {
+    const consulta = texto.trim();
+    if (!consulta || consultando) return;
+    await lanzarConsulta(consulta);
   };
 
   const escuchar = (str: string) => {
