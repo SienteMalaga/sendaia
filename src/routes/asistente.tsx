@@ -1,152 +1,118 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Sparkles } from "lucide-react";
+import { Mic, Sparkles, Database, Bot, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { consultarMaestro } from "@/lib/ai.functions";
+import { loadConsejos, type Consejo } from "@/lib/consejos";
 
 export const Route = createFileRoute("/asistente")({
   head: () => ({
     meta: [
       { title: "Asistente de Voz — Senda-IA" },
-      { name: "description", content: "Asistente de diagnóstico por voz, 100% local." },
+      { name: "description", content: "Asistente híbrido: base del maestro + IA experta." },
     ],
   }),
   component: Asistente,
 });
 
-type IdiomaCode = "es" | "en" | "fr" | "de" | "ar";
-type TemaKey = "aceite" | "bateria" | "bujia";
+type Resultado =
+  | { fuente: "consejo"; titulo: string; diagnostico: string; solucion: string; consejoMaestro?: string; autor: string }
+  | { fuente: "ia"; titulo: string; diagnostico: string; solucion: string; consejoMaestro: string; autor: string };
 
-const idiomas: { code: IdiomaCode; label: string; bcp47: string }[] = [
-  { code: "es", label: "Español", bcp47: "es-ES" },
-  { code: "en", label: "English", bcp47: "en-US" },
-  { code: "fr", label: "Français", bcp47: "fr-FR" },
-  { code: "de", label: "Deutsch", bcp47: "de-DE" },
-  { code: "ar", label: "العربية", bcp47: "ar-SA" },
-];
+const IDIOMAS = [
+  { code: "es", label: "Español", nombre: "Español" },
+  { code: "en", label: "English", nombre: "English" },
+  { code: "fr", label: "Français", nombre: "Français" },
+  { code: "de", label: "Deutsch", nombre: "Deutsch" },
+  { code: "ar", label: "العربية", nombre: "Arabic" },
+] as const;
 
-const ui: Record<IdiomaCode, Record<string, string>> = {
-  es: {
-    titulo: "Diagnóstico por voz", subtitulo: "Pulsa el micro o elige una palabra técnica. Respuesta al instante.",
-    idiomaLabel: "Idioma", pulsar: "Pulsar para Hablar", escuchando: "Escuchando...",
-    atajos: "Palabras clave de demo", transcriptLabel: "Transcript detectado por el micrófono",
-    transcriptPlaceholder: "Escribe exactamente lo que quieres simular: cómo cambiar el aceite",
-    tuConsulta: "Tu consulta", diagnostico: "Diagnóstico", solucion: "Solución",
-    validado: "Consejo validado por el maestro", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
-  },
-  en: {
-    titulo: "Voice diagnosis", subtitulo: "Tap the mic or pick a keyword. Instant answer.",
-    idiomaLabel: "Language", pulsar: "Press to Speak", escuchando: "Listening...",
-    atajos: "Demo keywords", transcriptLabel: "Microphone transcript",
-    transcriptPlaceholder: "Type the exact phrase to simulate: how to change the oil",
-    tuConsulta: "Your question", diagnostico: "Diagnosis", solucion: "Solution",
-    validado: "Validated by the master", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
-  },
-  fr: {
-    titulo: "Diagnostic vocal", subtitulo: "Appuyez ou choisissez un mot. Réponse immédiate.",
-    idiomaLabel: "Langue", pulsar: "Appuyer pour Parler", escuchando: "Écoute...",
-    atajos: "Mots-clés de démo", transcriptLabel: "Transcript du microphone",
-    transcriptPlaceholder: "Saisissez la phrase exacte à simuler : comment changer l'huile",
-    tuConsulta: "Votre question", diagnostico: "Diagnostic", solucion: "Solution",
-    validado: "Validé par le maître", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
-  },
-  de: {
-    titulo: "Sprachdiagnose", subtitulo: "Mikro drücken oder Stichwort wählen. Sofortantwort.",
-    idiomaLabel: "Sprache", pulsar: "Drücken zum Sprechen", escuchando: "Höre zu...",
-    atajos: "Demo-Schlüsselwörter", transcriptLabel: "Mikrofon-Transcript",
-    transcriptPlaceholder: "Exakten Demo-Satz eingeben: Öl wechseln",
-    tuConsulta: "Deine Frage", diagnostico: "Diagnose", solucion: "Lösung",
-    validado: "Vom Meister bestätigt", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
-  },
-  ar: {
-    titulo: "تشخيص صوتي", subtitulo: "اضغط أو اختر كلمة. الرد فوري.",
-    idiomaLabel: "اللغة", pulsar: "اضغط للتحدث", escuchando: "جارٍ الاستماع...",
-    atajos: "كلمات العرض", transcriptLabel: "نص الميكروفون",
-    transcriptPlaceholder: "اكتب العبارة المراد محاكاتها: تغيير الزيت",
-    tuConsulta: "سؤالك", diagnostico: "التشخيص", solucion: "الحل",
-    validado: "مصادق عليه من المعلم", sinConsulta: "Consulta no guardada. Intente buscar palabras como Aceite, Batería o Bujía",
-  },
-};
+type IdiomaCode = (typeof IDIOMAS)[number]["code"];
 
-type Respuesta = {
-  diagnostico: string;
-  solucion: string;
-  autor: string;
-};
-
-const RESPUESTAS: Record<TemaKey, { label: string; data: Respuesta }> = {
-  aceite: {
-    label: "Aceite",
-    data: {
-      diagnostico: "Nivel bajo o necesidad de cambio de fluido.",
-      solucion: "Vacía el cárter quitando el tapón inferior con el motor templado. Cambia el filtro de aceite y rellena con el SAE recomendado hasta la marca máxima de la varilla.",
-      autor: "Carlos Ortiz (Experto en Diagnosis)",
-    },
-  },
-  bateria: {
-    label: "Batería",
-    data: {
-      diagnostico: "Bornes con sulfato o falta de tensión.",
-      solucion: "Limpia los bornes con agua y bicarbonato si tienen costra blanca y aprieta las tuercas. Si sigue sin fuerza, usa pinzas de arranque.",
-      autor: "Paco Román (Mecánica Málaga)",
-    },
-  },
-  bujia: {
-    label: "Bujía",
-    data: {
-      diagnostico: "Desgaste en los electrodos o carbonilla.",
-      solucion: "Desconecta el cable de la bujía, usa una llave de bujías para extraerla y comprueba la distancia del electrodo. Sustitúyela si está negra o gastada.",
-      autor: "María José Suárez (Especialista en Motores)",
-    },
-  },
-};
-
-function normalizar(texto: string) {
-  return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function normalizar(t: string) {
+  return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-function detectarTema(transcript: string): TemaKey | null {
-  const limpio = normalizar(transcript);
-  if (limpio.includes("aceite")) return "aceite";
-  if (limpio.includes("bateria")) return "bateria";
-  if (limpio.includes("bujia")) return "bujia";
-  return null;
+function buscarConsejo(consulta: string, consejos: Consejo[]): Consejo | null {
+  const q = normalizar(consulta);
+  const palabras = q.split(/\s+/).filter((p) => p.length >= 4);
+  if (palabras.length === 0) return null;
+  let mejor: { c: Consejo; score: number } | null = null;
+  for (const c of consejos) {
+    const texto = normalizar(`${c.problema} ${c.solucion}`);
+    let score = 0;
+    for (const p of palabras) if (texto.includes(p)) score++;
+    if (score > 0 && (!mejor || score > mejor.score)) mejor = { c, score };
+  }
+  return mejor?.c ?? null;
 }
 
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
+  const [consulta, setConsulta] = useState("");
   const [escuchando, setEscuchando] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [tema, setTema] = useState<TemaKey | null>(null);
-  const [respuesta, setRespuesta] = useState<Respuesta | null>(null);
-  const [mensaje, setMensaje] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+  const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [consultaMostrada, setConsultaMostrada] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const t = ui[idioma];
+  const consultar = useServerFn(consultarMaestro);
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const seleccionar = (k: TemaKey) => {
-    if (escuchando) return;
-    setTranscript(RESPUESTAS[k].label);
-    setTema(k);
-    setRespuesta(RESPUESTAS[k].data);
-    setMensaje("");
+  const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
+
+  const procesar = async (texto: string) => {
+    const limpio = texto.trim();
+    if (!limpio) {
+      setError("Escribe o di tu consulta antes de buscar.");
+      return;
+    }
+    setError("");
+    setResultado(null);
+    setConsultaMostrada(limpio);
+
+    const match = buscarConsejo(limpio, loadConsejos());
+    if (match) {
+      setResultado({
+        fuente: "consejo",
+        titulo: match.problema,
+        diagnostico: match.problema,
+        solucion: match.solucion,
+        autor: match.autor,
+      });
+      return;
+    }
+
+    setCargando(true);
+    try {
+      const r = await consultar({ data: { consulta: limpio, idioma: idiomaNombre } });
+      setResultado({
+        fuente: "ia",
+        titulo: r.titulo,
+        diagnostico: r.diagnostico,
+        solucion: r.solucion,
+        consejoMaestro: r.consejoMaestro,
+        autor: r.autor,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al consultar al maestro.");
+    } finally {
+      setCargando(false);
+    }
   };
 
   const handleHablar = () => {
-    if (escuchando) return;
+    if (escuchando || cargando) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    setTema(null);
-    setRespuesta(null);
-    setMensaje("");
+    setError("");
+    setResultado(null);
+    setConsultaMostrada("");
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
-      const textoReal = transcript.trim();
-      const temaDetectado = detectarTema(textoReal);
       setEscuchando(false);
-      setTema(temaDetectado);
-      setRespuesta(temaDetectado ? RESPUESTAS[temaDetectado].data : null);
-      setMensaje(temaDetectado ? "" : t.sinConsulta);
+      procesar(consulta);
     }, 3000);
   };
 
@@ -155,18 +121,18 @@ function Asistente() {
       <header className="px-5 pt-10 pb-4">
         <div className="flex items-center gap-2 text-primary">
           <Sparkles className="h-4 w-4" />
-          <span className="text-xs font-semibold uppercase tracking-widest">Asistente IA</span>
+          <span className="text-xs font-semibold uppercase tracking-widest">Asistente IA híbrido</span>
         </div>
-        <h1 className="mt-1 text-2xl font-bold">{t.titulo}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t.subtitulo}</p>
+        <h1 className="mt-1 text-2xl font-bold">Diagnóstico inteligente</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Primero busca en la base de maestros. Si no hay coincidencia, Senda-IA genera el consejo.
+        </p>
       </header>
 
       <section className="px-5">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t.idiomaLabel}
-        </label>
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Idioma</label>
         <div className="flex flex-wrap gap-2">
-          {idiomas.map((i) => (
+          {IDIOMAS.map((i) => (
             <button
               key={i.code}
               onClick={() => setIdioma(i.code)}
@@ -185,8 +151,8 @@ function Asistente() {
       <section className="mt-8 flex flex-col items-center px-5">
         <button
           onClick={handleHablar}
-          disabled={escuchando}
-          className={`relative flex h-36 w-36 items-center justify-center rounded-full text-primary-foreground shadow-card transition active:scale-95 disabled:opacity-90 ${
+          disabled={escuchando || cargando}
+          className={`relative flex h-32 w-32 items-center justify-center rounded-full text-primary-foreground shadow-card transition active:scale-95 disabled:opacity-90 ${
             escuchando ? "animate-pulse" : ""
           }`}
           style={{
@@ -203,90 +169,71 @@ function Asistente() {
           )}
           <Mic className="h-12 w-12" />
         </button>
-
-        {escuchando ? (
-          <div className="mt-5 flex flex-col items-center gap-3">
-            <p className="text-center text-sm font-semibold text-red-600 animate-pulse">
-              {t.escuchando}
-            </p>
-            <div className="flex h-7 items-end gap-1">
-              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                <span
-                  key={i}
-                  className="w-1.5 rounded-full bg-red-500"
-                  style={{ animation: `wave 0.9s ease-in-out ${i * 0.1}s infinite`, height: "100%" }}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="mt-4 text-center text-sm font-medium text-muted-foreground">{t.pulsar}</p>
-        )}
+        <p className="mt-3 text-center text-sm font-medium text-muted-foreground">
+          {escuchando ? "Escuchando..." : "Pulsar para Hablar"}
+        </p>
       </section>
 
-      <section className="mt-8 px-5">
+      <section className="mt-6 px-5">
         <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t.transcriptLabel}
+          Tu consulta (voz o texto)
         </label>
         <textarea
-          value={transcript}
-          onChange={(event) => {
-            setTranscript(event.target.value);
-            setTema(null);
-            setRespuesta(null);
-            setMensaje("");
-          }}
-          placeholder={t.transcriptPlaceholder}
+          value={consulta}
+          onChange={(e) => setConsulta(e.target.value)}
+          placeholder="Ej. cómo limpiar un carburador / qué herramientas para cambiar una bujía / silbido en la prensa"
           rows={3}
           className="w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-soft outline-none transition placeholder:text-muted-foreground focus:border-primary"
         />
-      </section>
-
-      <section className="mt-5 px-5">
-        <label className="mb-2 block text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {t.atajos}
-        </label>
-        <div className="flex flex-wrap justify-center gap-2">
-          {(Object.keys(RESPUESTAS) as TemaKey[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => seleccionar(k)}
-              disabled={escuchando}
-              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                tema === k
-                  ? "border-primary bg-primary text-primary-foreground shadow-soft"
-                  : "border-border bg-card text-foreground hover:border-primary/60 hover:bg-primary/5"
-              }`}
-            >
-              {RESPUESTAS[k].label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {(respuesta || mensaje) && (
-        <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
-          <div className="mb-3 whitespace-pre-wrap rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-            <span className="font-semibold">{t.tuConsulta}: </span>{transcript || ""}
-          </div>
-
-          {respuesta ? (
-            <article className="space-y-3 rounded-2xl border border-border bg-card p-5 text-[15px] leading-relaxed shadow-card">
-              <p><span className="font-bold">{t.diagnostico}: </span>{respuesta.diagnostico}</p>
-              <p><span className="font-bold">{t.solucion}: </span>{respuesta.solucion}</p>
-              <p><span className="font-bold">{t.validado}: </span>{respuesta.autor}</p>
-            </article>
+        <button
+          onClick={() => procesar(consulta)}
+          disabled={cargando || escuchando}
+          className="mt-3 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 disabled:opacity-60"
+        >
+          {cargando ? (
+            <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Consultando al maestro...</span>
           ) : (
-            <div className="rounded-2xl border border-border bg-card p-5 text-sm font-semibold text-foreground shadow-card">
-              {mensaje}
+            "Consultar al maestro"
+          )}
+        </button>
+      </section>
+
+      {(consultaMostrada || resultado || error) && (
+        <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
+          {consultaMostrada && (
+            <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
+              <span className="font-semibold">Tu consulta: </span>{consultaMostrada}
             </div>
+          )}
+
+          {error && (
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm font-semibold text-destructive">
+              {error}
+            </div>
+          )}
+
+          {resultado && (
+            <article className="space-y-3 rounded-2xl border border-border bg-card p-5 text-[15px] leading-relaxed shadow-card">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
+                {resultado.fuente === "consejo" ? (
+                  <><Database className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Consejo del maestro (base)</span></>
+                ) : (
+                  <><Bot className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Generado por Senda-IA</span></>
+                )}
+              </div>
+              <h2 className="text-lg font-bold">{resultado.titulo}</h2>
+              <p><span className="font-bold">Diagnóstico: </span>{resultado.diagnostico}</p>
+              <p><span className="font-bold">Solución: </span>{resultado.solucion}</p>
+              {resultado.fuente === "ia" && resultado.consejoMaestro && (
+                <p><span className="font-bold">Truco del maestro: </span>{resultado.consejoMaestro}</p>
+              )}
+              <p className="border-t border-border pt-3 text-sm text-muted-foreground">
+                <span className="font-semibold">Validado por: </span>{resultado.autor}
+              </p>
+            </article>
           )}
         </section>
       )}
-
-      <style>{`
-        @keyframes wave { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
-      `}</style>
     </AppShell>
   );
 }

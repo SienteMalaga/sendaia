@@ -66,15 +66,7 @@ function Biblioteca() {
       setCargando(true);
       try {
         const r = await consultarMaestro({ data: { consulta: texto, idioma: "Español" } });
-        const items: Sugerencia[] = [
-          { titulo: r.titulo, categoria: r.categoria, autor: r.autor },
-          ...r.relacionados.map((rel) => ({
-            titulo: rel,
-            categoria: r.categoria,
-            autor: r.autor,
-          })),
-        ];
-        setSugerencias(items);
+        setSugerencias([{ titulo: r.titulo, categoria: "Generado por IA", autor: r.autor }]);
       } catch (e) {
         setErrMsg((e as Error)?.message ?? "No se pudo consultar al maestro.");
         setSugerencias([]);
@@ -84,6 +76,7 @@ function Biblioteca() {
     }, 700);
     return () => clearTimeout(handle);
   }, [q]);
+
 
   const totalLocal = grupos.reduce((acc, [, items]) => acc + items.length, 0);
 
