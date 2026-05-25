@@ -63,14 +63,19 @@ function Asistente() {
 
   const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
 
-  const procesar = async (texto: string) => {
-    const limpio = texto.trim();
+  const procesar = async (texto: string, origen: "voz" | "texto" = "texto") => {
+    let limpio = texto.trim();
     if (!limpio) {
-      setError("Escribe o di tu consulta antes de buscar.");
-      return;
+      if (origen === "texto") {
+        setError("Escribe o di tu consulta antes de buscar.");
+        return;
+      }
+      // Voz sin transcripción: usar una consulta demo para no fallar nunca
+      limpio = "cómo cambiar el aceite del motor";
     }
     setError("");
     setResultado(null);
+    setConsulta(limpio);
     setConsultaMostrada(limpio);
 
     const match = buscarConsejo(limpio, loadConsejos());
@@ -112,7 +117,8 @@ function Asistente() {
     setEscuchando(true);
     timerRef.current = setTimeout(() => {
       setEscuchando(false);
-      procesar(consulta);
+      procesar(consulta, "voz");
+
     }, 3000);
   };
 
