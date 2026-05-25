@@ -2,7 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { consultarMaestro } from "@/lib/ai.functions";
-import { ArrowLeft, Volume2, ShieldCheck, Sparkles, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, Volume2, ShieldCheck, Sparkles, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/detalle/$tema")({
   head: ({ params }) => ({
