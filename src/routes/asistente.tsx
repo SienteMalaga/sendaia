@@ -57,9 +57,50 @@ function Asistente() {
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [consultaMostrada, setConsultaMostrada] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const [narrando, setNarrando] = useState(false);
+  const [audioActivo, setAudioActivo] = useState(true);
   const consultar = useServerFn(consultarMaestro);
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  const detenerAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    setNarrando(false);
+  };
+
+  const narrar = async (texto: string) => {
+    try {
+      detenerAudio();
+      setNarrando(true);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: texto }),
+      });
+      if (!res.ok) throw new Error(`TTS ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => setNarrando(false);
+      audio.onerror = () => setNarrando(false);
+      await audio.play();
+    } catch {
+      setNarrando(false);
+    }
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); detenerAudio(); }, []);
+
 
   const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
 
