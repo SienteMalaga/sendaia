@@ -15,7 +15,6 @@ import { Route as AsistenteRouteImport } from './routes/asistente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetalleTemaRouteImport } from './routes/detalle.$tema'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
-import { Route as ApiSttRouteImport } from './routes/api/stt'
 
 const VeteranoRoute = VeteranoRouteImport.update({
   id: '/veterano',
@@ -47,18 +46,12 @@ const ApiTtsRoute = ApiTtsRouteImport.update({
   path: '/api/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSttRoute = ApiSttRouteImport.update({
-  id: '/api/stt',
-  path: '/api/stt',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
-  '/api/stt': typeof ApiSttRoute
   '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
@@ -67,7 +60,6 @@ export interface FileRoutesByTo {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
-  '/api/stt': typeof ApiSttRoute
   '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
@@ -77,7 +69,6 @@ export interface FileRoutesById {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
-  '/api/stt': typeof ApiSttRoute
   '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
@@ -88,7 +79,6 @@ export interface FileRouteTypes {
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
-    | '/api/stt'
     | '/api/tts'
     | '/detalle/$tema'
   fileRoutesByTo: FileRoutesByTo
@@ -97,7 +87,6 @@ export interface FileRouteTypes {
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
-    | '/api/stt'
     | '/api/tts'
     | '/detalle/$tema'
   id:
@@ -106,7 +95,6 @@ export interface FileRouteTypes {
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
-    | '/api/stt'
     | '/api/tts'
     | '/detalle/$tema'
   fileRoutesById: FileRoutesById
@@ -116,7 +104,6 @@ export interface RootRouteChildren {
   AsistenteRoute: typeof AsistenteRoute
   BibliotecaRoute: typeof BibliotecaRoute
   VeteranoRoute: typeof VeteranoRoute
-  ApiSttRoute: typeof ApiSttRoute
   ApiTtsRoute: typeof ApiTtsRoute
   DetalleTemaRoute: typeof DetalleTemaRoute
 }
@@ -165,13 +152,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/stt': {
-      id: '/api/stt'
-      path: '/api/stt'
-      fullPath: '/api/stt'
-      preLoaderRoute: typeof ApiSttRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -180,7 +160,6 @@ const rootRouteChildren: RootRouteChildren = {
   AsistenteRoute: AsistenteRoute,
   BibliotecaRoute: BibliotecaRoute,
   VeteranoRoute: VeteranoRoute,
-  ApiSttRoute: ApiSttRoute,
   ApiTtsRoute: ApiTtsRoute,
   DetalleTemaRoute: DetalleTemaRoute,
 }

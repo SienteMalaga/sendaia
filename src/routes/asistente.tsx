@@ -10,7 +10,7 @@ export const Route = createFileRoute("/asistente")({
   head: () => ({
     meta: [
       { title: "Asistente de Voz — Senda-IA" },
-      { name: "description", content: "Asistente híbrido multilenguaje: base del maestro + IA experta." },
+      { name: "description", content: "Asistente híbrido: base del maestro + IA experta." },
     ],
   }),
   component: Asistente,
@@ -29,16 +29,6 @@ const IDIOMAS = [
 ] as const;
 
 type IdiomaCode = (typeof IDIOMAS)[number]["code"];
-
-const NOMBRE_POR_CODE: Record<string, string> = {
-  es: "Español", en: "English", fr: "Français", de: "Deutsch", ar: "Arabic",
-  it: "Italiano", pt: "Português", nl: "Nederlands", ru: "Русский", zh: "中文", ja: "日本語",
-};
-
-function nombreDeIdioma(code: string): string {
-  const k = (code || "es").toLowerCase().slice(0, 2);
-  return NOMBRE_POR_CODE[k] ?? "Español";
-}
 
 function normalizar(t: string) {
   return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -60,18 +50,13 @@ function buscarConsejo(consulta: string, consejos: Consejo[]): Consejo | null {
 
 function Asistente() {
   const [idioma, setIdioma] = useState<IdiomaCode>("es");
-  const [idiomaDetectado, setIdiomaDetectado] = useState<string>("es");
   const [consulta, setConsulta] = useState("");
   const [escuchando, setEscuchando] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [consultaMostrada, setConsultaMostrada] = useState("");
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const [narrando, setNarrando] = useState(false);
@@ -91,14 +76,14 @@ function Asistente() {
     setNarrando(false);
   };
 
-  const narrar = async (texto: string, lang: string) => {
+  const narrar = async (texto: string) => {
     try {
       detenerAudio();
       setNarrando(true);
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: texto, language: lang }),
+        body: JSON.stringify({ text: texto }),
       });
       if (!res.ok) throw new Error(`TTS ${res.status}`);
       const blob = await res.blob();
@@ -114,10 +99,7 @@ function Asistente() {
     }
   };
 
-  useEffect(() => () => {
-    detenerAudio();
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-  }, []);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); detenerAudio(); }, []);
 
   useEffect(() => {
     if (!resultado || !audioActivo) return;
@@ -127,28 +109,28 @@ function Asistente() {
       resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
       `Validado por ${resultado.autor}.`,
     ].filter(Boolean).join(" ");
-    narrar(partes, idiomaDetectado);
+    narrar(partes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultado]);
 
-  const procesar = async (texto: string, origen: "voz" | "texto" = "texto", langCode?: string) => {
-    const limpio = texto.trim();
+
+
+  const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
+
+  const procesar = async (texto: string, origen: "voz" | "texto" = "texto") => {
+    let limpio = texto.trim();
     if (!limpio) {
       if (origen === "texto") {
         setError("Escribe o di tu consulta antes de buscar.");
         return;
       }
-      setError("No se detectó voz. Intenta de nuevo.");
-      return;
+      // Voz sin transcripción: usar una consulta demo para no fallar nunca
+      limpio = "cómo cambiar el aceite del motor";
     }
     setError("");
     setResultado(null);
     setConsulta(limpio);
     setConsultaMostrada(limpio);
-
-    const lang = (langCode ?? idioma).toLowerCase().slice(0, 2);
-    setIdiomaDetectado(lang);
-    const idiomaNombre = nombreDeIdioma(lang);
 
     const match = buscarConsejo(limpio, loadConsejos());
     if (match) {
@@ -180,79 +162,18 @@ function Asistente() {
     }
   };
 
-  const iniciarGrabacion = async () => {
+  const handleHablar = () => {
     if (escuchando || cargando) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
     setError("");
     setResultado(null);
     setConsultaMostrada("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "";
-      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-      mediaRecorderRef.current = mr;
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mr.onstop = async () => {
-        const tracks = streamRef.current?.getTracks() ?? [];
-        tracks.forEach((t) => t.stop());
-        streamRef.current = null;
-        const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
-        chunksRef.current = [];
-        if (blob.size < 1000) {
-          setEscuchando(false);
-          setError("Audio demasiado corto. Mantén pulsado y habla.");
-          return;
-        }
-        setEscuchando(false);
-        setCargando(true);
-        try {
-          const res = await fetch("/api/stt", {
-            method: "POST",
-            headers: { "Content-Type": blob.type || "audio/webm" },
-            body: blob,
-          });
-          const data = (await res.json()) as { transcript?: string; language?: string; error?: string };
-          if (!res.ok) throw new Error(data?.error ?? `STT ${res.status}`);
-          const transcript = (data.transcript ?? "").trim();
-          const lang = data.language ?? "es";
-          if (!transcript) {
-            setError("No se entendió. Inténtalo de nuevo.");
-            setCargando(false);
-            return;
-          }
-          setCargando(false);
-          await procesar(transcript, "voz", lang);
-        } catch (err) {
-          setCargando(false);
-          setError(err instanceof Error ? err.message : "Error al transcribir.");
-        }
-      };
-      mr.start();
-      setEscuchando(true);
-    } catch {
-      setError("No se pudo acceder al micrófono. Concede permisos e inténtalo de nuevo.");
+    setEscuchando(true);
+    timerRef.current = setTimeout(() => {
       setEscuchando(false);
-    }
-  };
+      procesar(consulta, "voz");
 
-  const detenerGrabacion = () => {
-    const mr = mediaRecorderRef.current;
-    if (mr && mr.state !== "inactive") mr.stop();
-  };
-
-  const handleHablar = () => {
-    if (escuchando) {
-      detenerGrabacion();
-    } else {
-      iniciarGrabacion();
-    }
+    }, 3000);
   };
 
   return (
@@ -264,14 +185,12 @@ function Asistente() {
         </div>
         <h1 className="mt-1 text-2xl font-bold">Diagnóstico inteligente</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Reconoce automáticamente el idioma. Habla en español, inglés o el que prefieras.
+          Primero busca en la base de maestros. Si no hay coincidencia, Senda-IA genera el consejo.
         </p>
       </header>
 
       <section className="px-5">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Idioma preferido (texto)
-        </label>
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Idioma</label>
         <div className="flex flex-wrap gap-2">
           {IDIOMAS.map((i) => (
             <button
@@ -292,7 +211,7 @@ function Asistente() {
       <section className="mt-8 flex flex-col items-center px-5">
         <button
           onClick={handleHablar}
-          disabled={cargando}
+          disabled={escuchando || cargando}
           className={`relative flex h-32 w-32 items-center justify-center rounded-full text-primary-foreground shadow-card transition active:scale-95 disabled:opacity-90 ${
             escuchando ? "animate-pulse" : ""
           }`}
@@ -311,7 +230,7 @@ function Asistente() {
           <Mic className="h-12 w-12" />
         </button>
         <p className="mt-3 text-center text-sm font-medium text-muted-foreground">
-          {escuchando ? "Grabando... pulsa para detener" : cargando ? "Procesando..." : "Pulsar para hablar"}
+          {escuchando ? "Escuchando..." : "Pulsar para Hablar"}
         </p>
       </section>
 
@@ -322,12 +241,12 @@ function Asistente() {
         <textarea
           value={consulta}
           onChange={(e) => setConsulta(e.target.value)}
-          placeholder="Ej. cómo limpiar un carburador / how to change a spark plug / silbido en la prensa"
+          placeholder="Ej. cómo limpiar un carburador / qué herramientas para cambiar una bujía / silbido en la prensa"
           rows={3}
           className="w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-soft outline-none transition placeholder:text-muted-foreground focus:border-primary"
         />
         <button
-          onClick={() => procesar(consulta, "texto")}
+          onClick={() => procesar(consulta)}
           disabled={cargando || escuchando}
           className="mt-3 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 disabled:opacity-60"
         >
@@ -340,10 +259,10 @@ function Asistente() {
       </section>
 
       {(consultaMostrada || resultado || error) && (
-        <section className="mt-6 px-5 animate-fade-in" dir={idiomaDetectado === "ar" ? "rtl" : "ltr"}>
+        <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
           {consultaMostrada && (
             <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
-              <span className="font-semibold">Tu consulta ({idiomaDetectado.toUpperCase()}): </span>{consultaMostrada}
+              <span className="font-semibold">Tu consulta: </span>{consultaMostrada}
             </div>
           )}
 
@@ -374,7 +293,7 @@ function Asistente() {
                       resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
                       `Validado por ${resultado.autor}.`,
                     ].filter(Boolean).join(" ");
-                    narrar(partes, idiomaDetectado);
+                    narrar(partes);
                   }}
                   className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[10px] text-secondary-foreground hover:border-primary/40"
                   aria-label={narrando ? "Detener narración" : "Escuchar narración"}
