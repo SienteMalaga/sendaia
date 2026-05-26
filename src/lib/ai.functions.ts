@@ -15,7 +15,7 @@ async function callAI(consulta: string, idiomaNombre: string): Promise<AIResp> {
   const system = `Eres un MAESTRO MECÁNICO VETERANO con 40 años de taller. Responde SIEMPRE en ${idiomaNombre} con tono cercano, directo y profesional de taller. Da consejos cortos, prácticos y accionables. Nada de teoría ni rodeos. Habla como un maestro que enseña a un aprendiz.`;
 
   const body = {
-    model: "google/gemini-3-flash-preview",
+    model: "openai/gpt-5",
     messages: [
       { role: "system", content: system },
       { role: "user", content: consulta },
