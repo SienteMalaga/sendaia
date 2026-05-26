@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Sparkles, Database, Bot, Loader2 } from "lucide-react";
+import { Mic, Sparkles, Database, Bot, Loader2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { consultarMaestro } from "@/lib/ai.functions";
