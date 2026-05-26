@@ -274,13 +274,35 @@ function Asistente() {
 
           {resultado && (
             <article className="space-y-3 rounded-2xl border border-border bg-card p-5 text-[15px] leading-relaxed shadow-card">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-                {resultado.fuente === "consejo" ? (
-                  <><Database className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Consejo del maestro (base)</span></>
-                ) : (
-                  <><Bot className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Generado por Senda-IA</span></>
-                )}
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider">
+                <div className="flex items-center gap-2">
+                  {resultado.fuente === "consejo" ? (
+                    <><Database className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Consejo del maestro (base)</span></>
+                  ) : (
+                    <><Bot className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Generado por Senda-IA</span></>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (narrando) { detenerAudio(); return; }
+                    setAudioActivo(true);
+                    const partes = [
+                      `Diagnóstico: ${resultado.diagnostico}.`,
+                      `Solución: ${resultado.solucion}.`,
+                      resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
+                      `Validado por ${resultado.autor}.`,
+                    ].filter(Boolean).join(" ");
+                    narrar(partes);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[10px] text-secondary-foreground hover:border-primary/40"
+                  aria-label={narrando ? "Detener narración" : "Escuchar narración"}
+                >
+                  {narrando ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                  {narrando ? "Detener" : "Escuchar"}
+                </button>
               </div>
+
               <h2 className="text-lg font-bold">{resultado.titulo}</h2>
               <p><span className="font-bold">Diagnóstico: </span>{resultado.diagnostico}</p>
               <p><span className="font-bold">Solución: </span>{resultado.solucion}</p>
