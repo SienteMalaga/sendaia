@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, BookOpen, ShieldCheck, Wrench } from "lucide-react";
+import { Mic, BookOpen, ShieldCheck } from "lucide-react";
+import sendaiaLogo from "@/assets/sendaia-logo.jpeg";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
