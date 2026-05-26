@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, BookOpen, ShieldCheck, Wrench } from "lucide-react";
+import { Mic, BookOpen, ShieldCheck } from "lucide-react";
+import sendaiaLogo from "@/assets/sendaia-logo.jpeg";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,18 +21,17 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <AppShell>
-      <header className="px-5 pt-10 pb-6">
-        <div className="flex items-center gap-2 text-primary">
-          <Wrench className="h-5 w-5" />
-          <span className="text-xs font-semibold uppercase tracking-widest">Senda-IA</span>
-        </div>
-        <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground">
-          Senda-IaMalaga2026
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <header className="px-5 pt-8 pb-4">
+        <img
+          src={sendaiaLogo}
+          alt="SendaIA — El saber del veterano al alcance del aprendiz"
+          className="mx-auto w-full max-w-[280px] h-auto"
+        />
+        <p className="mt-3 text-center text-sm text-muted-foreground">
           Conocimiento de taller que no se pierde.
         </p>
       </header>
+
 
       <section
         className="mx-5 overflow-hidden rounded-3xl p-6 text-primary-foreground shadow-card"
