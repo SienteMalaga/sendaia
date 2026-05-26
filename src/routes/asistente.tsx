@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { Mic, Sparkles, Database, Bot, Loader2 } from "lucide-react";
+import { Mic, Sparkles, Database, Bot, Loader2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { consultarMaestro } from "@/lib/ai.functions";
@@ -57,9 +57,63 @@ function Asistente() {
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [consultaMostrada, setConsultaMostrada] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const [narrando, setNarrando] = useState(false);
+  const [audioActivo, setAudioActivo] = useState(true);
   const consultar = useServerFn(consultarMaestro);
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  const detenerAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    setNarrando(false);
+  };
+
+  const narrar = async (texto: string) => {
+    try {
+      detenerAudio();
+      setNarrando(true);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: texto }),
+      });
+      if (!res.ok) throw new Error(`TTS ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => setNarrando(false);
+      audio.onerror = () => setNarrando(false);
+      await audio.play();
+    } catch {
+      setNarrando(false);
+    }
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); detenerAudio(); }, []);
+
+  useEffect(() => {
+    if (!resultado || !audioActivo) return;
+    const partes = [
+      `Diagnóstico: ${resultado.diagnostico}.`,
+      `Solución: ${resultado.solucion}.`,
+      resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
+      `Validado por ${resultado.autor}.`,
+    ].filter(Boolean).join(" ");
+    narrar(partes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultado]);
+
+
 
   const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
 
@@ -220,13 +274,35 @@ function Asistente() {
 
           {resultado && (
             <article className="space-y-3 rounded-2xl border border-border bg-card p-5 text-[15px] leading-relaxed shadow-card">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider">
-                {resultado.fuente === "consejo" ? (
-                  <><Database className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Consejo del maestro (base)</span></>
-                ) : (
-                  <><Bot className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Generado por Senda-IA</span></>
-                )}
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider">
+                <div className="flex items-center gap-2">
+                  {resultado.fuente === "consejo" ? (
+                    <><Database className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Consejo del maestro (base)</span></>
+                  ) : (
+                    <><Bot className="h-3.5 w-3.5 text-primary" /><span className="text-primary">Generado por Senda-IA</span></>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (narrando) { detenerAudio(); return; }
+                    setAudioActivo(true);
+                    const partes = [
+                      `Diagnóstico: ${resultado.diagnostico}.`,
+                      `Solución: ${resultado.solucion}.`,
+                      resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
+                      `Validado por ${resultado.autor}.`,
+                    ].filter(Boolean).join(" ");
+                    narrar(partes);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[10px] text-secondary-foreground hover:border-primary/40"
+                  aria-label={narrando ? "Detener narración" : "Escuchar narración"}
+                >
+                  {narrando ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                  {narrando ? "Detener" : "Escuchar"}
+                </button>
               </div>
+
               <h2 className="text-lg font-bold">{resultado.titulo}</h2>
               <p><span className="font-bold">Diagnóstico: </span>{resultado.diagnostico}</p>
               <p><span className="font-bold">Solución: </span>{resultado.solucion}</p>

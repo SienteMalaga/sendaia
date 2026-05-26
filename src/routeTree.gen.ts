@@ -14,6 +14,7 @@ import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as AsistenteRouteImport } from './routes/asistente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetalleTemaRouteImport } from './routes/detalle.$tema'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
 
 const VeteranoRoute = VeteranoRouteImport.update({
   id: '/veterano',
@@ -40,12 +41,18 @@ const DetalleTemaRoute = DetalleTemaRouteImport.update({
   path: '/detalle/$tema',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
 export interface FileRoutesById {
@@ -61,19 +69,33 @@ export interface FileRoutesById {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/asistente' | '/biblioteca' | '/veterano' | '/detalle/$tema'
+  fullPaths:
+    | '/'
+    | '/asistente'
+    | '/biblioteca'
+    | '/veterano'
+    | '/api/tts'
+    | '/detalle/$tema'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/asistente' | '/biblioteca' | '/veterano' | '/detalle/$tema'
+  to:
+    | '/'
+    | '/asistente'
+    | '/biblioteca'
+    | '/veterano'
+    | '/api/tts'
+    | '/detalle/$tema'
   id:
     | '__root__'
     | '/'
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
+    | '/api/tts'
     | '/detalle/$tema'
   fileRoutesById: FileRoutesById
 }
@@ -82,6 +104,7 @@ export interface RootRouteChildren {
   AsistenteRoute: typeof AsistenteRoute
   BibliotecaRoute: typeof BibliotecaRoute
   VeteranoRoute: typeof VeteranoRoute
+  ApiTtsRoute: typeof ApiTtsRoute
   DetalleTemaRoute: typeof DetalleTemaRoute
 }
 
@@ -122,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DetalleTemaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -130,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   AsistenteRoute: AsistenteRoute,
   BibliotecaRoute: BibliotecaRoute,
   VeteranoRoute: VeteranoRoute,
+  ApiTtsRoute: ApiTtsRoute,
   DetalleTemaRoute: DetalleTemaRoute,
 }
 export const routeTree = rootRouteImport
