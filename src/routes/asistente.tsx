@@ -101,6 +101,19 @@ function Asistente() {
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); detenerAudio(); }, []);
 
+  useEffect(() => {
+    if (!resultado || !audioActivo) return;
+    const partes = [
+      `Diagnóstico: ${resultado.diagnostico}.`,
+      `Solución: ${resultado.solucion}.`,
+      resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
+      `Validado por ${resultado.autor}.`,
+    ].filter(Boolean).join(" ");
+    narrar(partes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultado]);
+
+
 
   const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
 
