@@ -15,6 +15,7 @@ import { Route as AsistenteRouteImport } from './routes/asistente'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetalleTemaRouteImport } from './routes/detalle.$tema'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
+import { Route as ApiMaestroRouteImport } from './routes/api/maestro'
 
 const VeteranoRoute = VeteranoRouteImport.update({
   id: '/veterano',
@@ -46,12 +47,18 @@ const ApiTtsRoute = ApiTtsRouteImport.update({
   path: '/api/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMaestroRoute = ApiMaestroRouteImport.update({
+  id: '/api/maestro',
+  path: '/api/maestro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/api/maestro': typeof ApiMaestroRoute
   '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/api/maestro': typeof ApiMaestroRoute
   '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/asistente': typeof AsistenteRoute
   '/biblioteca': typeof BibliotecaRoute
   '/veterano': typeof VeteranoRoute
+  '/api/maestro': typeof ApiMaestroRoute
   '/api/tts': typeof ApiTtsRoute
   '/detalle/$tema': typeof DetalleTemaRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
+    | '/api/maestro'
     | '/api/tts'
     | '/detalle/$tema'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
+    | '/api/maestro'
     | '/api/tts'
     | '/detalle/$tema'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/asistente'
     | '/biblioteca'
     | '/veterano'
+    | '/api/maestro'
     | '/api/tts'
     | '/detalle/$tema'
   fileRoutesById: FileRoutesById
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   AsistenteRoute: typeof AsistenteRoute
   BibliotecaRoute: typeof BibliotecaRoute
   VeteranoRoute: typeof VeteranoRoute
+  ApiMaestroRoute: typeof ApiMaestroRoute
   ApiTtsRoute: typeof ApiTtsRoute
   DetalleTemaRoute: typeof DetalleTemaRoute
 }
@@ -152,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/maestro': {
+      id: '/api/maestro'
+      path: '/api/maestro'
+      fullPath: '/api/maestro'
+      preLoaderRoute: typeof ApiMaestroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -160,9 +180,20 @@ const rootRouteChildren: RootRouteChildren = {
   AsistenteRoute: AsistenteRoute,
   BibliotecaRoute: BibliotecaRoute,
   VeteranoRoute: VeteranoRoute,
+  ApiMaestroRoute: ApiMaestroRoute,
   ApiTtsRoute: ApiTtsRoute,
   DetalleTemaRoute: DetalleTemaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
