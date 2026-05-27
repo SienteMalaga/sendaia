@@ -2,23 +2,32 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Mic, Sparkles, Database, Bot, Loader2, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { consultarMaestro } from "@/lib/ai.functions";
 import { loadConsejos, type Consejo } from "@/lib/consejos";
 
 export const Route = createFileRoute("/asistente")({
   head: () => ({
     meta: [
       { title: "Asistente de Voz — Senda-IA" },
-      { name: "description", content: "Asistente híbrido: base del maestro + IA experta." },
+      { name: "description", content: "Asistente híbrido: base del maestro + IA experta en streaming." },
     ],
   }),
   component: Asistente,
 });
 
-type Resultado =
-  | { fuente: "consejo"; titulo: string; diagnostico: string; solucion: string; consejoMaestro?: string; autor: string }
-  | { fuente: "ia"; titulo: string; diagnostico: string; solucion: string; consejoMaestro: string; autor: string };
+type ResultadoConsejo = {
+  fuente: "consejo";
+  titulo: string;
+  diagnostico: string;
+  solucion: string;
+  autor: string;
+};
+type ResultadoIA = {
+  fuente: "ia";
+  titulo: string;
+  texto: string; // streaming markdown-ish
+  autor: string;
+};
+type Resultado = ResultadoConsejo | ResultadoIA;
 
 const IDIOMAS = [
   { code: "es", label: "Español", nombre: "Español" },
@@ -53,15 +62,16 @@ function Asistente() {
   const [consulta, setConsulta] = useState("");
   const [escuchando, setEscuchando] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState("");
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [consultaMostrada, setConsultaMostrada] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const [narrando, setNarrando] = useState(false);
   const [audioActivo, setAudioActivo] = useState(true);
-  const consultar = useServerFn(consultarMaestro);
 
   const detenerAudio = () => {
     if (audioRef.current) {
@@ -80,6 +90,7 @@ function Asistente() {
     try {
       detenerAudio();
       setNarrando(true);
+      // Fire-and-forget: corre en segundo plano, no bloquea el texto en pantalla
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,23 +110,91 @@ function Asistente() {
     }
   };
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); detenerAudio(); }, []);
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    abortRef.current?.abort();
+    detenerAudio();
+  }, []);
 
-  useEffect(() => {
-    if (!resultado || !audioActivo) return;
-    const partes = [
-      `Diagnóstico: ${resultado.diagnostico}.`,
-      `Solución: ${resultado.solucion}.`,
-      resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
-      `Validado por ${resultado.autor}.`,
-    ].filter(Boolean).join(" ");
-    narrar(partes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resultado]);
+  const textoParaNarrar = (r: Resultado) => {
+    if (r.fuente === "consejo") {
+      return `Diagnóstico: ${r.diagnostico}. Solución: ${r.solucion}. Validado por ${r.autor}.`;
+    }
+    // Quitar marcadores markdown básicos para una lectura más natural
+    return r.texto.replace(/[#*`_>]/g, "").replace(/\s+/g, " ").trim();
+  };
 
+  const streamIA = async (limpio: string) => {
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
+    setStreaming(true);
+    setResultado({
+      fuente: "ia",
+      titulo: limpio,
+      texto: "",
+      autor: "Generado por Senda-IA (Ingeniero Mecánico Experto)",
+    });
 
-  const idiomaNombre = IDIOMAS.find((i) => i.code === idioma)?.nombre ?? "Español";
+    try {
+      const res = await fetch("/api/maestro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consulta: limpio }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok || !res.body) {
+        const t = await res.text().catch(() => "");
+        throw new Error(t || `Error ${res.status}`);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acumulado = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (!data || data === "[DONE]") continue;
+          try {
+            const json = JSON.parse(data);
+            if (json.error) throw new Error(json.error);
+            if (typeof json.t === "string") {
+              acumulado += json.t;
+              setResultado((prev) =>
+                prev && prev.fuente === "ia" ? { ...prev, texto: acumulado } : prev,
+              );
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      // Texto completo → narrar en segundo plano (el texto YA está en pantalla)
+      if (audioActivo && acumulado.trim()) {
+        void narrar(
+          textoParaNarrar({
+            fuente: "ia",
+            titulo: limpio,
+            texto: acumulado,
+            autor: "Generado por Senda-IA (Ingeniero Mecánico Experto)",
+          }),
+        );
+      }
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      setError(e instanceof Error ? e.message : "Error al consultar al maestro.");
+    } finally {
+      setStreaming(false);
+    }
+  };
 
   const procesar = async (texto: string, origen: "voz" | "texto" = "texto") => {
     let limpio = texto.trim();
@@ -124,39 +203,31 @@ function Asistente() {
         setError("Escribe o di tu consulta antes de buscar.");
         return;
       }
-      // Voz sin transcripción: usar una consulta demo para no fallar nunca
       limpio = "cómo cambiar el aceite del motor";
     }
     setError("");
     setResultado(null);
+    detenerAudio();
     setConsulta(limpio);
     setConsultaMostrada(limpio);
 
     const match = buscarConsejo(limpio, loadConsejos());
     if (match) {
-      setResultado({
+      const r: ResultadoConsejo = {
         fuente: "consejo",
         titulo: match.problema,
         diagnostico: match.problema,
         solucion: match.solucion,
         autor: match.autor,
-      });
+      };
+      setResultado(r);
+      if (audioActivo) void narrar(textoParaNarrar(r));
       return;
     }
 
     setCargando(true);
     try {
-      const r = await consultar({ data: { consulta: limpio, idioma: idiomaNombre } });
-      setResultado({
-        fuente: "ia",
-        titulo: r.titulo,
-        diagnostico: r.diagnostico,
-        solucion: r.solucion,
-        consejoMaestro: r.consejoMaestro,
-        autor: r.autor,
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al consultar al maestro.");
+      await streamIA(limpio);
     } finally {
       setCargando(false);
     }
@@ -172,7 +243,6 @@ function Asistente() {
     timerRef.current = setTimeout(() => {
       setEscuchando(false);
       procesar(consulta, "voz");
-
     }, 3000);
   };
 
@@ -185,7 +255,7 @@ function Asistente() {
         </div>
         <h1 className="mt-1 text-2xl font-bold">Diagnóstico inteligente</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Primero busca en la base de maestros. Si no hay coincidencia, Senda-IA genera el consejo.
+          Respuesta en streaming: el texto aparece al instante, el audio llega después en segundo plano.
         </p>
       </header>
 
@@ -247,10 +317,10 @@ function Asistente() {
         />
         <button
           onClick={() => procesar(consulta)}
-          disabled={cargando || escuchando}
+          disabled={cargando || escuchando || streaming}
           className="mt-3 w-full rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 disabled:opacity-60"
         >
-          {cargando ? (
+          {cargando || streaming ? (
             <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Consultando al maestro...</span>
           ) : (
             "Consultar al maestro"
@@ -287,28 +357,31 @@ function Asistente() {
                   onClick={() => {
                     if (narrando) { detenerAudio(); return; }
                     setAudioActivo(true);
-                    const partes = [
-                      `Diagnóstico: ${resultado.diagnostico}.`,
-                      `Solución: ${resultado.solucion}.`,
-                      resultado.fuente === "ia" && resultado.consejoMaestro ? `Truco del maestro: ${resultado.consejoMaestro}.` : "",
-                      `Validado por ${resultado.autor}.`,
-                    ].filter(Boolean).join(" ");
-                    narrar(partes);
+                    void narrar(textoParaNarrar(resultado));
                   }}
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[10px] text-secondary-foreground hover:border-primary/40"
+                  disabled={resultado.fuente === "ia" && streaming}
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[10px] text-secondary-foreground hover:border-primary/40 disabled:opacity-50"
                   aria-label={narrando ? "Detener narración" : "Escuchar narración"}
                 >
                   {narrando ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-                  {narrando ? "Detener" : "Escuchar"}
+                  {narrando ? "Detener" : streaming ? "Audio al terminar" : "Escuchar"}
                 </button>
               </div>
 
               <h2 className="text-lg font-bold">{resultado.titulo}</h2>
-              <p><span className="font-bold">Diagnóstico: </span>{resultado.diagnostico}</p>
-              <p><span className="font-bold">Solución: </span>{resultado.solucion}</p>
-              {resultado.fuente === "ia" && resultado.consejoMaestro && (
-                <p><span className="font-bold">Truco del maestro: </span>{resultado.consejoMaestro}</p>
+
+              {resultado.fuente === "consejo" ? (
+                <>
+                  <p><span className="font-bold">Diagnóstico: </span>{resultado.diagnostico}</p>
+                  <p><span className="font-bold">Solución: </span>{resultado.solucion}</p>
+                </>
+              ) : (
+                <p className="whitespace-pre-wrap">
+                  {resultado.texto}
+                  {streaming && <span className="ml-0.5 animate-pulse">▍</span>}
+                </p>
               )}
+
               <p className="border-t border-border pt-3 text-sm text-muted-foreground">
                 <span className="font-semibold">Validado por: </span>{resultado.autor}
               </p>
