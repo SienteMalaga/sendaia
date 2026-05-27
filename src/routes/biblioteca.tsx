@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useEffect, useMemo, useState } from "react";
-import { Search, Car, Factory, Wrench, Sparkles, Loader2, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, Car, Factory, Wrench, Sparkles, Loader2, ChevronRight, Send } from "lucide-react";
 import { loadConsejos, type Categoria, type Consejo } from "@/lib/consejos";
-import { consultarMaestro } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/biblioteca")({
   head: () => ({
@@ -21,20 +20,20 @@ const iconos: Record<Categoria, typeof Car> = {
   "Mecánica General": Wrench,
 };
 
-type Sugerencia = { titulo: string; categoria: string; autor: string };
-
 function Biblioteca() {
   const [consejos, setConsejos] = useState<Consejo[]>([]);
   const [q, setQ] = useState("");
-  const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
+  const [consultaActiva, setConsultaActiva] = useState("");
+  const [respuesta, setRespuesta] = useState("");
   const [cargando, setCargando] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setConsejos(loadConsejos());
+    return () => abortRef.current?.abort();
   }, []);
 
-  // Búsqueda local en los consejos guardados
   const grupos = useMemo(() => {
     const t = q.toLowerCase().trim();
     const filtrados = !t
@@ -54,29 +53,65 @@ function Biblioteca() {
     return Array.from(map.entries());
   }, [consejos, q]);
 
-  // Generación dinámica con IA cuando el usuario busca algo nuevo
-  useEffect(() => {
+  async function preguntarMaestro() {
     const texto = q.trim();
-    setErrMsg(null);
-    if (texto.length < 4) {
-      setSugerencias([]);
+    if (texto.length < 2) {
+      setErrMsg("Escribe una consulta antes de buscar.");
       return;
     }
-    const handle = setTimeout(async () => {
-      setCargando(true);
-      try {
-        const r = await consultarMaestro({ data: { consulta: texto, idioma: "Español" } });
-        setSugerencias([{ titulo: r.titulo, categoria: "Generado por IA", autor: r.autor }]);
-      } catch (e) {
-        setErrMsg((e as Error)?.message ?? "No se pudo consultar al maestro.");
-        setSugerencias([]);
-      } finally {
-        setCargando(false);
-      }
-    }, 700);
-    return () => clearTimeout(handle);
-  }, [q]);
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
+    setErrMsg(null);
+    setRespuesta("");
+    setConsultaActiva(texto);
+    setCargando(true);
+
+    try {
+      const res = await fetch("/api/maestro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consulta: texto }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok || !res.body) {
+        const t = await res.text().catch(() => "");
+        throw new Error(t || `Error ${res.status}`);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (!data || data === "[DONE]") continue;
+          try {
+            const json = JSON.parse(data);
+            if (json.error) throw new Error(json.error);
+            if (typeof json.t === "string") {
+              setRespuesta((prev) => prev + json.t);
+            }
+          } catch (e) {
+            if ((e as Error).message) throw e;
+          }
+        }
+      }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") {
+        setErrMsg((e as Error)?.message ?? "No se pudo consultar al maestro.");
+      }
+    } finally {
+      setCargando(false);
+    }
+  }
 
   const totalLocal = grupos.reduce((acc, [, items]) => acc + items.length, 0);
 
@@ -86,66 +121,68 @@ function Biblioteca() {
         <span className="text-xs font-semibold uppercase tracking-widest text-primary">
           Biblioteca
         </span>
-        <h1 className="mt-1 text-2xl font-bold">Consejos guardados</h1>
+        <h1 className="mt-1 text-2xl font-bold">Maestro IA en automoción</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Busca cualquier avería: si no está, el maestro IA la genera para ti.
+          Pregunta cualquier avería, modelo o mantenimiento. Pulsa Enter o el botón para consultar.
         </p>
       </header>
 
       <div className="px-5">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Ej. humo blanco motor, alternador, fresadora…"
-            className="w-full rounded-full border border-border bg-card py-3 pl-10 pr-4 text-sm shadow-soft outline-none focus:border-primary"
-          />
-        </div>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void preguntarMaestro();
+          }}
+          className="flex items-center gap-2"
+        >
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Ej. Golf 7 TDI no arranca, ruido en frenos…"
+              className="w-full rounded-full border border-border bg-card py-3 pl-10 pr-4 text-sm shadow-soft outline-none focus:border-primary"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={cargando}
+            className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-soft transition hover:opacity-90 disabled:opacity-50"
+          >
+            {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            <span className="hidden sm:inline">Preguntar</span>
+          </button>
+        </form>
       </div>
 
-      {/* Sugerencias generadas por IA */}
-      {q.trim().length >= 4 && (
+      {(consultaActiva || cargando || respuesta || errMsg) && (
         <section className="mt-6 px-5">
           <div className="mb-2 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold uppercase tracking-wider">
-              Resultados del maestro IA
+              Maestro IA · {consultaActiva}
             </h2>
           </div>
-          {cargando ? (
-            <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Generando ficha para "{q}"…
-            </div>
-          ) : errMsg ? (
+          {errMsg ? (
             <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
               {errMsg}
             </div>
           ) : (
-            <div className="space-y-2">
-              {sugerencias.map((s) => (
-                <Link
-                  key={s.titulo}
-                  to="/detalle/$tema"
-                  params={{ tema: encodeURIComponent(s.titulo) }}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft transition hover:border-primary hover:bg-primary/5"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold text-foreground">{s.titulo}</div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                      {s.categoria} · ✓ {s.autor}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-primary" />
-                </Link>
-              ))}
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                {respuesta}
+                {cargando && <span className="ml-0.5 inline-block animate-pulse">▍</span>}
+              </pre>
+              {!cargando && respuesta && (
+                <div className="mt-3 text-xs font-medium text-success">
+                  ✓ Generado por Senda-IA (Ingeniero Mecánico Experto)
+                </div>
+              )}
             </div>
           )}
         </section>
       )}
 
-      {/* Casos guardados */}
       <div className="mt-8 space-y-6 px-5">
         <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
           Saber del taller {totalLocal > 0 && <span className="text-muted-foreground">({totalLocal})</span>}
