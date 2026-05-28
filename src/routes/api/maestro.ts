@@ -53,6 +53,8 @@ export const Route = createFileRoute("/api/maestro")({
             // Modelo ligero y rápido para minimizar latencia (TTFB y velocidad de streaming)
             model: "google/gemini-2.5-flash-lite",
             stream: true,
+            max_tokens: 280,
+            temperature: 0.3,
             messages: [
               { role: "system", content: buildSystemPrompt(idiomaNombre) },
               { role: "user", content: consulta },
