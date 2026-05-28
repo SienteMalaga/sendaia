@@ -1,15 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const SYSTEM_PROMPT = `Eres un INGENIERO MECÁNICO EXPERTO en automoción con 30 años de experiencia en taller y oficina técnica. Conoces a fondo TODAS las marcas y modelos de coches (europeos, asiáticos, americanos), motores gasolina/diésel/híbridos/eléctricos, cajas de cambios, electrónica, suspensión, frenos, climatización y diagnosis OBD-II.
+const IDIOMAS: Record<string, string> = {
+  es: "Español",
+  en: "English",
+  fr: "Français",
+  de: "Deutsch",
+  ar: "Arabic (العربية)",
+};
 
-Responde SIEMPRE en español, con tono profesional, directo y cercano de maestro de taller. Estructura tu respuesta de forma clara y útil para un operario o conductor:
+function buildSystemPrompt(idiomaNombre: string) {
+  return `Eres un INGENIERO MECÁNICO EXPERTO en automoción con 30 años de experiencia en taller y oficina técnica. Conoces todas las marcas y modelos (gasolina, diésel, híbridos, eléctricos), cajas de cambios, electrónica, suspensión, frenos, climatización y diagnosis OBD-II.
 
-🔧 **Diagnóstico:** Causa probable de la avería o explicación técnica breve.
-🛠️ **Solución / Procedimiento:** Pasos concretos y accionables, numerados si aplica.
-⚙️ **Datos técnicos:** Pares de apriete, capacidades, intervalos o referencias si el modelo lo requiere.
-💡 **Consejo del maestro:** Truco veterano, aviso de seguridad o recomendación práctica.
+RESPONDE SIEMPRE en ${idiomaNombre}. Tono profesional, directo, de maestro de taller. SÉ BREVE Y ÚTIL: máximo 180 palabras totales, frases cortas.
 
-Sé preciso, evita rodeos teóricos. Si te preguntan por un modelo concreto (ej. "Golf 7 TDI 2015"), adapta los datos a ese modelo. Si la consulta no es de automoción, recondúcela amablemente al ámbito mecánico.`;
+Estructura tu respuesta EXACTAMENTE con estos 4 bloques (traduce los títulos a ${idiomaNombre}):
+
+🔧 **Diagnóstico:** 1-2 frases con la causa probable.
+🛠️ **Solución:** Pasos numerados, accionables (máx 4).
+⚙️ **Datos técnicos:** Pares de apriete / capacidades / referencias clave si aplica (1-2 líneas).
+💡 **Consejo del maestro:** Truco veterano o aviso de seguridad (1 frase).
+
+Si la consulta no es de automoción, recondúcela amablemente al ámbito mecánico.`;
+}
 
 export const Route = createFileRoute("/api/maestro")({
   server: {
@@ -19,7 +31,7 @@ export const Route = createFileRoute("/api/maestro")({
         if (!apiKey) {
           return new Response("LOVABLE_API_KEY no configurada", { status: 500 });
         }
-        let body: { consulta?: string };
+        let body: { consulta?: string; idioma?: string };
         try {
           body = await request.json();
         } catch {
@@ -29,6 +41,8 @@ export const Route = createFileRoute("/api/maestro")({
         if (consulta.length < 2) {
           return new Response("Consulta vacía", { status: 400 });
         }
+        const idiomaCode = (body.idioma ?? "es").toString().toLowerCase();
+        const idiomaNombre = IDIOMAS[idiomaCode] ?? "Español";
 
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -37,10 +51,11 @@ export const Route = createFileRoute("/api/maestro")({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            // Modelo ligero y rápido para minimizar latencia (TTFB y velocidad de streaming)
+            model: "google/gemini-2.5-flash-lite",
             stream: true,
             messages: [
-              { role: "system", content: SYSTEM_PROMPT },
+              { role: "system", content: buildSystemPrompt(idiomaNombre) },
               { role: "user", content: consulta },
             ],
           }),
@@ -111,6 +126,7 @@ export const Route = createFileRoute("/api/maestro")({
           headers: {
             "content-type": "text/event-stream; charset=utf-8",
             "cache-control": "no-store, no-transform",
+            "x-accel-buffering": "no",
             connection: "keep-alive",
           },
         });
