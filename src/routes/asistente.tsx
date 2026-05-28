@@ -141,7 +141,7 @@ function Asistente() {
       const res = await fetch("/api/maestro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ consulta: limpio }),
+        body: JSON.stringify({ consulta: limpio, idioma }),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
