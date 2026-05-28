@@ -45,15 +45,17 @@ function Biblioteca() {
   }, []);
 
   const grupos = useMemo(() => {
-    const t = q.toLowerCase().trim();
-    const filtrados = !t
+    const norm = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const t = norm(q.trim());
+    const tokens = t.split(/\s+/).filter((w) => w.length >= 2);
+    const filtrados = tokens.length === 0
       ? consejos
-      : consejos.filter(
-          (c) =>
-            c.problema.toLowerCase().includes(t) ||
-            c.solucion.toLowerCase().includes(t) ||
-            c.autor.toLowerCase().includes(t),
-        );
+      : consejos.filter((c) => {
+          const hay = norm(`${c.problema} ${c.solucion} ${c.autor} ${c.categoria}`);
+          // coincide si CUALQUIER palabra aparece (búsqueda inmediata, multi-idioma)
+          return tokens.some((tok) => hay.includes(tok));
+        });
     const map = new Map<Categoria, Consejo[]>();
     for (const c of filtrados) {
       const arr = map.get(c.categoria) ?? [];
