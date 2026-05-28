@@ -82,7 +82,7 @@ function Biblioteca() {
       const res = await fetch("/api/maestro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ consulta: texto }),
+        body: JSON.stringify({ consulta: texto, idioma }),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
