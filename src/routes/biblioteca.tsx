@@ -137,6 +137,28 @@ function Biblioteca() {
         </p>
       </header>
 
+      <div className="px-5 pb-3">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Idioma
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {IDIOMAS.map((i) => (
+            <button
+              key={i.code}
+              type="button"
+              onClick={() => setIdioma(i.code)}
+              className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                idioma === i.code
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-foreground hover:border-primary/40"
+              }`}
+            >
+              {i.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="px-5">
         <form
           onSubmit={(e) => {
