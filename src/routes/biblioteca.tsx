@@ -20,9 +20,19 @@ const iconos: Record<Categoria, typeof Car> = {
   "Mecánica General": Wrench,
 };
 
+const IDIOMAS = [
+  { code: "es", label: "Español" },
+  { code: "en", label: "English" },
+  { code: "fr", label: "Français" },
+  { code: "de", label: "Deutsch" },
+  { code: "ar", label: "العربية" },
+] as const;
+type IdiomaCode = (typeof IDIOMAS)[number]["code"];
+
 function Biblioteca() {
   const [consejos, setConsejos] = useState<Consejo[]>([]);
   const [q, setQ] = useState("");
+  const [idioma, setIdioma] = useState<IdiomaCode>("es");
   const [consultaActiva, setConsultaActiva] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [cargando, setCargando] = useState(false);
