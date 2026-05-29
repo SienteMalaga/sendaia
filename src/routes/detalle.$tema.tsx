@@ -25,6 +25,11 @@ function Detalle() {
   });
 
   const escuchar = (texto: string) => {
+    if (data && "audioUrl" in data && typeof data.audioUrl === "string") {
+      const audio = new Audio(data.audioUrl);
+      audio.play();
+      return;
+    }
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = "es-ES";
