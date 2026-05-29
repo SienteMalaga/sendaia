@@ -1,8 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Mic, Save, CheckCircle2, Square } from "lucide-react";
 import { saveConsejo, type Categoria } from "@/lib/consejos";
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 export const Route = createFileRoute("/veterano")({
   head: () => ({
