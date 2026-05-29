@@ -6,6 +6,7 @@ export interface Consejo {
   solucion: string;
   autor: string;
   categoria: Categoria;
+  audioUrl?: string;
 }
 
 export const consejosIniciales: Consejo[] = [
