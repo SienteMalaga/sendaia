@@ -32,23 +32,61 @@ function Veterano() {
   const [tiempo, setTiempo] = useState(0);
   const [guardado, setGuardado] = useState(false);
 
-  const toggleGrabar = () => {
+  const [audioUrl, setAudioUrl] = useState<string | undefined>(undefined);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopRecording = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") {
+      mr.stop();
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setGrabando(false);
+  };
+
+  const toggleGrabar = async () => {
     if (grabando) {
-      setGrabando(false);
+      stopRecording();
       return;
     }
-    setGrabando(true);
-    setTiempo(0);
-    const interval = setInterval(() => {
-      setTiempo((t) => {
-        if (t >= 30) {
-          clearInterval(interval);
-          setGrabando(false);
-          return t;
-        }
-        return t + 1;
-      });
-    }, 1000);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+      const mr = new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mr.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+        const base64 = await blobToBase64(blob);
+        setAudioUrl(base64);
+      };
+      mr.start();
+      setGrabando(true);
+      setTiempo(0);
+      timerRef.current = setInterval(() => {
+        setTiempo((t) => {
+          if (t >= 30) {
+            stopRecording();
+            return t;
+          }
+          return t + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error("No se pudo acceder al micrófono", err);
+      setGrabando(false);
+    }
   };
 
   const handleGuardar = () => {
@@ -58,11 +96,13 @@ function Veterano() {
       categoria,
       problema,
       solucion,
+      audioUrl,
     });
     setGuardado(true);
     setProblema("");
     setSolucion("");
     setTiempo(0);
+    setAudioUrl(undefined);
     setTimeout(() => setGuardado(false), 2500);
   };
 
