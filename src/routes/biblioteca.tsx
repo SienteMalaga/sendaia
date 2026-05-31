@@ -245,6 +245,7 @@ function Biblioteca() {
                     key={c.id}
                     to="/detalle/$tema"
                     params={{ tema: encodeURIComponent(c.problema) }}
+                    state={{ consejo: c } as never}
                     className="block rounded-2xl border border-border bg-card p-4 shadow-soft transition hover:border-primary hover:bg-primary/5"
                   >
                     <h4 className="font-bold text-foreground">{c.problema}</h4>
