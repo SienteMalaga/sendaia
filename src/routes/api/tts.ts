@@ -11,7 +11,7 @@ export const Route = createFileRoute("/api/tts")({
             headers: { "content-type": "application/json" },
           });
         }
-        let body: { text?: string; model?: string };
+        let body: { text?: string; model?: string; lang?: string };
         try {
           body = await request.json();
         } catch {
@@ -27,7 +27,18 @@ export const Route = createFileRoute("/api/tts")({
             headers: { "content-type": "application/json" },
           });
         }
-        const model = body.model ?? "aura-2-celeste-es";
+        // Selección de voz según idioma detectado en el texto o pasado por el cliente
+        const detectLang = (t: string): "en" | "es" => {
+          const sample = t.toLowerCase();
+          const esHits = (sample.match(/\b(el|la|los|las|de|que|para|con|una|por|del|es|está|cómo|qué|aceite|motor|coche|frenos|diagnóstico|solución|consejo)\b/g) ?? []).length;
+          const enHits = (sample.match(/\b(the|and|to|of|for|with|is|are|how|what|engine|car|oil|brakes|diagnosis|solution|tip|step)\b/g) ?? []).length;
+          if (enHits > esHits) return "en";
+          if (esHits > enHits) return "es";
+          // sin acentos ni ñ → probablemente inglés
+          return /[áéíóúñ¿¡]/.test(sample) ? "es" : "en";
+        };
+        const lang = body.lang === "en" || body.lang === "es" ? body.lang : detectLang(text);
+        const model = body.model ?? (lang === "en" ? "aura-asteria-en" : "aura-2-celeste-es");
         const dgRes = await fetch(
           `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&encoding=mp3`,
           {
