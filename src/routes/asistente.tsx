@@ -32,9 +32,6 @@ type Resultado = ResultadoConsejo | ResultadoIA;
 const IDIOMAS = [
   { code: "es", label: "Español", nombre: "Español" },
   { code: "en", label: "English", nombre: "English" },
-  { code: "fr", label: "Français", nombre: "Français" },
-  { code: "de", label: "Deutsch", nombre: "Deutsch" },
-  { code: "ar", label: "العربية", nombre: "Arabic" },
 ] as const;
 
 type IdiomaCode = (typeof IDIOMAS)[number]["code"];
@@ -329,7 +326,7 @@ function Asistente() {
       </section>
 
       {(consultaMostrada || resultado || error) && (
-        <section className="mt-6 px-5 animate-fade-in" dir={idioma === "ar" ? "rtl" : "ltr"}>
+        <section className="mt-6 px-5 animate-fade-in" dir="ltr">
           {consultaMostrada && (
             <div className="mb-3 rounded-2xl bg-secondary p-3 text-sm text-secondary-foreground">
               <span className="font-semibold">Tu consulta: </span>{consultaMostrada}
