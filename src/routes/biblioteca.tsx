@@ -23,9 +23,6 @@ const iconos: Record<Categoria, typeof Car> = {
 const IDIOMAS = [
   { code: "es", label: "Español" },
   { code: "en", label: "English" },
-  { code: "fr", label: "Français" },
-  { code: "de", label: "Deutsch" },
-  { code: "ar", label: "العربية" },
 ] as const;
 type IdiomaCode = (typeof IDIOMAS)[number]["code"];
 

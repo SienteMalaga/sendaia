@@ -30,7 +30,16 @@ function Detalle() {
     enabled: !localConsejo,
   });
 
-  const data = localConsejo
+  type DetalleData = {
+    titulo: string;
+    diagnostico: string;
+    solucion: string;
+    consejoMaestro: string;
+    autor: string;
+    audioUrl?: string;
+  };
+
+  const data: DetalleData | null = localConsejo
     ? {
         titulo: localConsejo.problema,
         diagnostico: localConsejo.problema,
@@ -40,13 +49,13 @@ function Detalle() {
         audioUrl: localConsejo.audioUrl,
       }
     : aiData
-      ? { ...aiData, audioUrl: undefined as string | undefined }
+      ? { ...aiData, audioUrl: undefined }
       : null;
 
   const escuchar = (texto: string) => {
     if (data?.audioUrl) {
       const audio = new Audio(data.audioUrl);
-      audio.play();
+      void audio.play();
       return;
     }
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
