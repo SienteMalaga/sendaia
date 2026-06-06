@@ -131,7 +131,7 @@ function Asistente() {
       fuente: "ia",
       titulo: limpio,
       texto: "",
-      autor: "Generado por Senda-IA (Ingeniero Mecánico Experto)",
+      autor: "Generado por Senda-IA (Consultor Experto Internacional)",
     });
 
     try {
@@ -181,7 +181,7 @@ function Asistente() {
             fuente: "ia",
             titulo: limpio,
             texto: acumulado,
-            autor: "Generado por Senda-IA (Ingeniero Mecánico Experto)",
+            autor: "Generado por Senda-IA (Consultor Experto Internacional)",
           }),
         );
       }
@@ -308,7 +308,7 @@ function Asistente() {
         <textarea
           value={consulta}
           onChange={(e) => setConsulta(e.target.value)}
-          placeholder="Ej. cómo limpiar un carburador / qué herramientas para cambiar una bujía / silbido en la prensa"
+          placeholder="Ej. plan de marketing para una cafetería / cómo reducir costes logísticos / silbido en una prensa / ask anything about your business…"
           rows={3}
           className="w-full resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground shadow-soft outline-none transition placeholder:text-muted-foreground focus:border-primary"
         />
