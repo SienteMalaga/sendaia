@@ -3,25 +3,15 @@ import { createFileRoute } from "@tanstack/react-router";
 const IDIOMAS: Record<string, string> = {
   es: "Español",
   en: "English",
-  fr: "Français",
-  de: "Deutsch",
-  ar: "Arabic (العربية)",
 };
 
 function buildSystemPrompt(idiomaNombre: string) {
-  return `Eres un INGENIERO MECÁNICO EXPERTO en automoción. Tono directo de maestro de taller.
+  return `Ingeniero mecánico experto. Responde SIEMPRE en ${idiomaNombre} (o en el idioma del usuario si es claro). MÁXIMO 60 palabras. Sin saludos ni introducciones.
 
-IDIOMA (REGLA ABSOLUTA): Detecta el idioma de la consulta del usuario y RESPONDE SIEMPRE EN ESE MISMO IDIOMA, incluso si difiere del idioma preferido (${idiomaNombre}). Si la consulta es ambigua o muy corta, usa ${idiomaNombre}. Nunca mezcles idiomas.
-
-ULTRA BREVE: máximo 90 palabras totales. Sin introducciones. Al grano.
-
-Formato EXACTO (traduce los títulos al idioma de respuesta):
-
-🔧 **Diagnóstico:** 1 frase.
-🛠️ **Solución:** 2-3 pasos numerados muy cortos.
-💡 **Consejo:** 1 frase.
-
-Si no es de automoción, recondúcela en 1 frase.`;
+Formato:
+🔧 **Diagnóstico:** 1 frase corta.
+🛠️ **Solución:** 2 pasos numerados muy breves.
+💡 **Consejo:** 1 frase.`;
 }
 
 export const Route = createFileRoute("/api/maestro")({
@@ -52,11 +42,11 @@ export const Route = createFileRoute("/api/maestro")({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            // Modelo ligero y rápido para minimizar latencia (TTFB y velocidad de streaming)
-            model: "google/gemini-2.5-flash-lite",
+            // Modelo más ligero y rápido posible para minimizar latencia
+            model: "google/gemini-3.1-flash-lite-preview",
             stream: true,
-            max_tokens: 280,
-            temperature: 0.3,
+            max_tokens: 160,
+            temperature: 0.2,
             messages: [
               { role: "system", content: buildSystemPrompt(idiomaNombre) },
               { role: "user", content: consulta },
